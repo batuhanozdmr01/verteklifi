@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verteklifi | Açık Artırma</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='brand/verteklifi-logo.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='brand/verteklifi-icon.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -190,7 +190,7 @@
                 <div class="hidden sm:flex w-full sm:w-auto items-center justify-between sm:justify-start gap-3 sm:gap-4">
                     <button onclick="toggleSidebar()" class="text-2xl hover:text-orange-950 transition"><i class="fa-solid fa-bars"></i></button>
                     <button type="button" onclick="goHome()" class="flex items-center shrink-0" aria-label="Verteklifi ana sayfa">
-                        <img src="{{ url_for('static', filename='brand/verteklifi-logo.png') }}" alt="Verteklifi" class="h-10 sm:h-14 w-44 sm:w-60 object-cover object-center rounded-lg bg-white/10">
+                        <img src="{{ url_for('static', filename='brand/verteklifi-logo.png') }}" alt="Verteklifi" class="h-14 w-60 object-cover object-center rounded-lg bg-white/10 mix-blend-screen">
                     </button>
                 </div>
                 <div class="relative order-1 sm:order-none w-full sm:flex-1 sm:max-w-md sm:mx-4" data-search-root>
@@ -232,8 +232,8 @@
                         {% endif %}
                         <a href="/logout" class="hidden sm:inline-block shrink-0 bg-red-500 hover:bg-red-600 text-white py-3 sm:py-2 px-3 rounded-lg text-xs font-bold transition">Çıkış</a>
                     {% else %}
-                        <button onclick="toggleModal('modal-login')" class="hidden sm:inline-block shrink-0 text-white hover:text-orange-100 font-bold text-sm transition">Giriş Yap</button>
-                        <button onclick="toggleModal('modal-register')" class="hidden sm:inline-block shrink-0 bg-white text-orange-600 hover:bg-orange-50 font-bold py-2 px-4 rounded-lg text-sm transition">Kayıt Ol</button>
+                        <button onclick="toggleModal('modal-login')" class="flex-1 sm:flex-none shrink-0 border border-white/30 bg-white/10 text-white hover:bg-white/20 font-black py-2.5 sm:py-2 px-3 rounded-lg text-xs sm:text-sm transition">Giriş Yap</button>
+                        <button onclick="toggleModal('modal-register')" class="flex-1 sm:flex-none shrink-0 bg-white text-orange-600 hover:bg-orange-50 font-black py-2.5 sm:py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm transition">Üye Ol</button>
                     {% endif %}
                     <button onclick="openListingModal()" class="hidden sm:inline-block shrink-0 bg-orange-950 hover:bg-black text-white font-bold py-3 sm:py-2 px-3 sm:px-4 rounded-lg transition whitespace-nowrap"><i class="fa-solid fa-plus mr-2"></i>İlan Ver</button>
                 </div>
@@ -251,11 +251,16 @@
         </div>
         {% endif %}
         <div class="container mx-auto px-4 py-8">
-            <div class="flex items-center justify-between mb-4 gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                 <h2 id="current-category-title" class="text-2xl font-black text-gray-800 border-l-4 border-orange-600 pl-4 uppercase tracking-tight">Tüm İlanlar</h2>
-                <button onclick="openMobileFilterModal()" class="md:hidden shrink-0 bg-white border border-gray-100 shadow-sm text-gray-800 rounded-2xl px-4 py-3 text-sm font-black">
-                    <i class="fa-solid fa-sliders mr-2 text-orange-600"></i>Filtrele
-                </button>
+                <div class="md:hidden grid grid-cols-2 gap-2">
+                    <button onclick="toggleSidebar()" class="bg-white border border-gray-100 shadow-sm text-gray-800 rounded-2xl px-4 py-3 text-sm font-black">
+                        <i class="fa-solid fa-layer-group mr-2 text-orange-600"></i>Kategoriler
+                    </button>
+                    <button onclick="openMobileFilterModal()" class="bg-white border border-gray-100 shadow-sm text-gray-800 rounded-2xl px-4 py-3 text-sm font-black">
+                        <i class="fa-solid fa-sliders mr-2 text-orange-600"></i>Filtrele
+                    </button>
+                </div>
             </div>
             <div class="hidden md:block bg-white border border-gray-100 rounded-2xl p-4 mb-6 shadow-sm">
                 <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
