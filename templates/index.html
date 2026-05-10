@@ -251,10 +251,13 @@
         </div>
         {% endif %}
         <div class="container mx-auto px-4 py-8">
-            <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+            <div class="flex items-center justify-between mb-4 gap-3">
                 <h2 id="current-category-title" class="text-2xl font-black text-gray-800 border-l-4 border-orange-600 pl-4 uppercase tracking-tight">Tüm İlanlar</h2>
+                <button onclick="openMobileFilterModal()" class="md:hidden shrink-0 bg-white border border-gray-100 shadow-sm text-gray-800 rounded-2xl px-4 py-3 text-sm font-black">
+                    <i class="fa-solid fa-sliders mr-2 text-orange-600"></i>Filtrele
+                </button>
             </div>
-            <div class="bg-white border border-gray-100 rounded-2xl p-4 mb-6 shadow-sm">
+            <div class="hidden md:block bg-white border border-gray-100 rounded-2xl p-4 mb-6 shadow-sm">
                 <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
                     <button onclick="sortProducts('cheap')" class="whitespace-nowrap px-4 py-2 text-xs font-bold hover:bg-orange-50 rounded-lg transition text-gray-600">En Düşük</button>
                     <button onclick="sortProducts('expensive')" class="whitespace-nowrap px-4 py-2 text-xs font-bold hover:bg-orange-50 rounded-lg transition text-gray-600">En Yüksek</button>
@@ -278,6 +281,36 @@
     </div>
 
     <!-- MODALLAR -->
+    <div id="modal-mobile-filter" class="fixed inset-0 bg-black/60 hidden items-end justify-center z-[120] p-0 md:hidden backdrop-blur-sm" onclick="if (event.target === this) closeMobileFilterModal()">
+        <div class="bg-white w-full rounded-t-3xl p-5 shadow-2xl max-h-[86vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-black text-gray-800">Filtrele</h2>
+                <button onclick="closeMobileFilterModal()" class="text-gray-400 hover:text-gray-700 text-2xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <button type="button" onclick="chooseMobileSort('cheap')" data-mobile-sort="cheap" class="mobile-sort-btn rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-black text-gray-600">En Düşük</button>
+                <button type="button" onclick="chooseMobileSort('expensive')" data-mobile-sort="expensive" class="mobile-sort-btn rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-black text-gray-600">En Yüksek</button>
+                <button type="button" onclick="chooseMobileSort('newest')" data-mobile-sort="newest" class="mobile-sort-btn rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-black text-gray-600">En Yeni</button>
+                <button type="button" onclick="chooseMobileSort('ending')" data-mobile-sort="ending" class="mobile-sort-btn rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-black text-gray-600">Süresi Azalan</button>
+            </div>
+            <div class="space-y-3">
+                <input type="number" id="mobile-filter-min-price" class="w-full border border-gray-200 rounded-2xl px-4 py-4 text-base outline-none focus:border-orange-500" placeholder="Min fiyat">
+                <input type="number" id="mobile-filter-max-price" class="w-full border border-gray-200 rounded-2xl px-4 py-4 text-base outline-none focus:border-orange-500" placeholder="Max fiyat">
+                <input type="text" id="mobile-filter-location" class="w-full border border-gray-200 rounded-2xl px-4 py-4 text-base outline-none focus:border-orange-500" placeholder="Şehir / ilçe">
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-5">
+                <button onclick="clearMobileFilters()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl px-4 py-4 text-sm font-black transition">
+                    <i class="fa-solid fa-rotate-left mr-2"></i>Temizle
+                </button>
+                <button onclick="applyMobileFilters()" class="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl px-4 py-4 text-sm font-black transition">
+                    Uygula
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-login" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
         <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
             <h2 class="text-3xl font-black mb-2 text-orange-600 text-center">Giriş Yap</h2>
@@ -826,6 +859,7 @@
         let productCardImageIndexes = {};
         let editProductImageState = {};
         let advancedFilters = { minPrice: null, maxPrice: null, location: '' };
+        let mobilePendingSortType = null;
         let privateChatPolling = false;
         let lastPrivateChatSignature = '';
         let activeSearchSuggestionIndex = -1;
@@ -1176,12 +1210,101 @@
                 maxPrice: maxValue === '' ? null : Number(maxValue),
                 location: document.getElementById('filter-location').value.trim().toLowerCase()
             };
+            syncMobileFilterFields();
             renderCurrentView();
         }
 
         function clearAdvancedFilters() {
-            ['filter-min-price', 'filter-max-price', 'filter-location'].forEach(id => document.getElementById(id).value = '');
-            applyAdvancedFilters();
+            currentSortType = null;
+            advancedFilters = { minPrice: null, maxPrice: null, location: '' };
+            syncAllFilterFields();
+            renderCurrentView();
+        }
+
+        function syncAllFilterFields() {
+            const fieldValues = [
+                ['filter-min-price', advancedFilters.minPrice ?? ''],
+                ['filter-max-price', advancedFilters.maxPrice ?? ''],
+                ['filter-location', advancedFilters.location || ''],
+                ['mobile-filter-min-price', advancedFilters.minPrice ?? ''],
+                ['mobile-filter-max-price', advancedFilters.maxPrice ?? ''],
+                ['mobile-filter-location', advancedFilters.location || '']
+            ];
+            fieldValues.forEach(([id, value]) => {
+                const input = document.getElementById(id);
+                if (input) input.value = value;
+            });
+            mobilePendingSortType = currentSortType;
+            updateMobileSortButtons();
+        }
+
+        function syncMobileFilterFields() {
+            ['mobile-filter-min-price', 'mobile-filter-max-price', 'mobile-filter-location'].forEach((id, index) => {
+                const input = document.getElementById(id);
+                if (!input) return;
+                if (index === 0) input.value = advancedFilters.minPrice ?? '';
+                if (index === 1) input.value = advancedFilters.maxPrice ?? '';
+                if (index === 2) input.value = advancedFilters.location || '';
+            });
+            mobilePendingSortType = currentSortType;
+            updateMobileSortButtons();
+        }
+
+        function openMobileFilterModal() {
+            syncAllFilterFields();
+            const modal = document.getElementById('modal-mobile-filter');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeMobileFilterModal() {
+            const modal = document.getElementById('modal-mobile-filter');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function chooseMobileSort(sortType) {
+            mobilePendingSortType = mobilePendingSortType === sortType ? null : sortType;
+            updateMobileSortButtons();
+        }
+
+        function updateMobileSortButtons() {
+            document.querySelectorAll('[data-mobile-sort]').forEach(button => {
+                const selected = button.dataset.mobileSort === mobilePendingSortType;
+                button.classList.toggle('bg-orange-600', selected);
+                button.classList.toggle('text-white', selected);
+                button.classList.toggle('border-orange-600', selected);
+                button.classList.toggle('bg-gray-50', !selected);
+                button.classList.toggle('text-gray-600', !selected);
+                button.classList.toggle('border-gray-100', !selected);
+            });
+        }
+
+        function applyMobileFilters() {
+            const minValue = document.getElementById('mobile-filter-min-price')?.value || '';
+            const maxValue = document.getElementById('mobile-filter-max-price')?.value || '';
+            advancedFilters = {
+                minPrice: minValue === '' ? null : Number(minValue),
+                maxPrice: maxValue === '' ? null : Number(maxValue),
+                location: (document.getElementById('mobile-filter-location')?.value || '').trim().toLowerCase()
+            };
+            currentSortType = mobilePendingSortType;
+            syncAllFilterFields();
+            closeMobileFilterModal();
+            renderCurrentView();
+        }
+
+        function clearMobileFilters() {
+            currentSortType = null;
+            mobilePendingSortType = null;
+            advancedFilters = { minPrice: null, maxPrice: null, location: '' };
+            syncAllFilterFields();
+            closeMobileFilterModal();
+            renderCurrentView();
         }
 
         function renderParticipants(product, compact = true) {
