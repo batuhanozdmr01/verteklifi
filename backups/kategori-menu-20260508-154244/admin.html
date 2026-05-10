@@ -1,0 +1,1525 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Göktuğ | Admin Paneli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigasyon -->
+    <nav class="bg-indigo-900 text-white p-4 shadow-xl flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="bg-white p-2 rounded-lg">
+                <i class="fa-solid fa-gauge-high text-indigo-900 text-xl"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tighter">GÖKTUĞ <span class="text-indigo-300 font-light">ADMIN</span></h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="text-sm font-medium bg-indigo-800 px-3 py-1 rounded-full border border-indigo-700">
+                <i class="fa-solid fa-user-shield mr-2"></i>{{ current_user.name }}
+            </span>
+            <a href="/" class="bg-white text-indigo-900 hover:bg-indigo-50 px-4 py-2 rounded-lg font-bold text-sm transition-all duration-300 flex items-center">
+                <i class="fa-solid fa-house mr-2"></i>Siteye Dön
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6 space-y-8">
+        <!-- Istatistik Kartlari -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="bg-blue-100 p-4 rounded-xl text-blue-600">
+                    <i class="fa-solid fa-tag text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm font-bold uppercase tracking-wider">Toplam Ilan</p>
+                    <p class="text-3xl font-black text-gray-800">{{ stats.total_products }}</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="bg-green-100 p-4 rounded-xl text-green-600">
+                    <i class="fa-solid fa-gavel text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm font-bold uppercase tracking-wider">Toplam Teklif</p>
+                    <p class="text-3xl font-black text-gray-800">{{ stats.total_bids }}</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="bg-purple-100 p-4 rounded-xl text-purple-600">
+                    <i class="fa-solid fa-users text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm font-bold uppercase tracking-wider">Toplam Üye</p>
+                    <p class="text-3xl font-black text-gray-800">{{ stats.total_users }}</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="bg-red-100 p-4 rounded-xl text-red-600">
+                    <i class="fa-solid fa-flag text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm font-bold uppercase tracking-wider">Açık Rapor</p>
+                    <p class="text-3xl font-black text-gray-800">{{ stats.open_reports }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-800 flex items-center">
+                            <i class="fa-solid fa-bell-concierge mr-3 text-indigo-600"></i>Admin Görev Merkezi
+                        </h2>
+                        <p class="text-xs font-bold text-gray-400 mt-1">Onay, şikayet, destek ve admin bildirimleri tek yerde.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-yellow-50 text-yellow-700 px-3 py-2 rounded-xl text-[10px] font-black">Onay: {{ stats.pending_products }}</span>
+                        <span class="bg-red-50 text-red-700 px-3 py-2 rounded-xl text-[10px] font-black">Rapor: {{ stats.open_reports }}</span>
+                        <span class="bg-blue-50 text-blue-700 px-3 py-2 rounded-xl text-[10px] font-black">İtiraz: {{ stats.open_appeals }}</span>
+                        <span class="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-xl text-[10px] font-black">Vitrin: {{ stats.featured_products }}</span>
+                    </div>
+                </div>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto custom-scrollbar">
+                    {% if admin_tasks %}
+                        {% for task in admin_tasks %}
+                        <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <span class="inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase {% if task.severity == 'red' %}bg-red-100 text-red-700{% elif task.severity == 'orange' %}bg-orange-100 text-orange-700{% elif task.severity == 'blue' %}bg-blue-100 text-blue-700{% else %}bg-indigo-100 text-indigo-700{% endif %}">{{ task.label }}</span>
+                                    <p class="mt-2 text-sm font-black text-gray-800 break-words">{{ task.title }}</p>
+                                    <p class="text-[10px] font-bold text-gray-400 break-words">{{ task.detail }}</p>
+                                </div>
+                                <div class="flex shrink-0 gap-1">
+                                    {% if task.product_id and task.type == 'product' %}
+                                        <button data-product-id="{{ task.product_id }}" onclick="approveProductFromButton(this)" class="bg-green-50 text-green-700 px-2 py-1 rounded-lg text-[9px] font-black">Onay</button>
+                                        <button data-product-id="{{ task.product_id }}" onclick="toggleProductFeaturedFromButton(this)" class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg text-[9px] font-black">Öne</button>
+                                    {% elif task.product_id %}
+                                        <button data-product-id="{{ task.product_id }}" onclick="toggleProductFeaturedFromButton(this)" class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg text-[9px] font-black">Öne çıkar</button>
+                                    {% elif task.report_id %}
+                                        <button data-report-id="{{ task.report_id }}" onclick="markReportReviewingFromButton(this)" class="bg-orange-50 text-orange-700 px-2 py-1 rounded-lg text-[9px] font-black">İncele</button>
+                                        <button data-report-id="{{ task.report_id }}" onclick="resolveReportFromButton(this)" class="bg-green-50 text-green-700 px-2 py-1 rounded-lg text-[9px] font-black">Kapat</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="md:col-span-2 text-center text-xs text-gray-400 italic py-8">Bekleyen admin görevi yok.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 class="text-xl font-black text-gray-800 flex items-center mb-4">
+                    <i class="fa-solid fa-chart-pie mr-3 text-indigo-600"></i>Kontrol Özeti
+                </h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-green-50 rounded-2xl p-4">
+                        <p class="text-2xl font-black text-green-700">{{ stats.active_products }}</p>
+                        <p class="text-[10px] font-black text-green-800 uppercase">Aktif ilan</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-2xl p-4">
+                        <p class="text-2xl font-black text-blue-700">{{ stats.completed_products }}</p>
+                        <p class="text-[10px] font-black text-blue-800 uppercase">Tamamlanan</p>
+                    </div>
+                    <div class="bg-orange-50 rounded-2xl p-4">
+                        <p class="text-2xl font-black text-orange-700">{{ stats.chat_messages }}</p>
+                        <p class="text-[10px] font-black text-orange-800 uppercase">Sohbet mesajı</p>
+                    </div>
+                    <div class="bg-indigo-50 rounded-2xl p-4">
+                        <p class="text-2xl font-black text-indigo-700">{{ stats.featured_products }}</p>
+                        <p class="text-[10px] font-black text-indigo-800 uppercase">Öne çıkan</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-black text-gray-800 flex items-center">
+                        <i class="fa-solid fa-bolt mr-3 text-indigo-600"></i>Hızlı İşlem Araması
+                    </h2>
+                    <p class="text-xs font-bold text-gray-400 mt-1">Kullanıcı veya ilan bulup direkt işlem yap.</p>
+                </div>
+                <div class="relative w-full md:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input id="adminQuickSearchInput" oninput="scheduleAdminQuickSearch()" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="İsim, e-posta veya ilan ara...">
+                </div>
+            </div>
+            <div id="adminQuickResults" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 class="text-xl font-black text-gray-800 flex items-center mb-5">
+                    <i class="fa-solid fa-chart-line mr-3 text-indigo-600"></i>Son 7 Gün
+                </h2>
+                <div class="grid grid-cols-7 gap-3 items-end h-52">
+                    {% for day in daily_stats %}
+                        <div class="flex flex-col items-center justify-end h-full gap-2">
+                            <div class="flex items-end gap-1 h-36">
+                                <div title="İlan: {{ day.products }}" data-bar-height="{{ (day.products / max_daily_count * 100) if max_daily_count else 0 }}" class="w-4 bg-blue-500 rounded-t"></div>
+                                <div title="Teklif: {{ day.bids }}" data-bar-height="{{ (day.bids / max_daily_count * 100) if max_daily_count else 0 }}" class="w-4 bg-orange-500 rounded-t"></div>
+                            </div>
+                            <span class="text-[10px] font-black text-gray-400">{{ day.label }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="flex gap-4 mt-4 text-xs font-bold text-gray-500">
+                    <span><i class="fa-solid fa-square text-blue-500 mr-1"></i>İlan</span>
+                    <span><i class="fa-solid fa-square text-orange-500 mr-1"></i>Teklif</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 class="text-xl font-black text-gray-800 flex items-center mb-5">
+                    <i class="fa-solid fa-sliders mr-3 text-indigo-600"></i>Site Ayarları
+                </h2>
+                <div class="space-y-3">
+                    <label class="block rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                        <span class="block text-[10px] font-black text-gray-500 uppercase">Minimum teklif</span>
+                        <span class="block text-[11px] font-bold text-gray-400 mb-2">Üyelerin verebileceği en düşük teklif tutarı.</span>
+                        <div class="flex items-center gap-2">
+                            <input id="setting-min-bid" type="number" value="{{ settings.min_bid }}" class="w-full border border-gray-200 rounded-xl p-3 text-sm" placeholder="Minimum teklif">
+                            <span class="text-xs font-black text-gray-500">TL</span>
+                        </div>
+                    </label>
+                    <label class="block rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                        <span class="block text-[10px] font-black text-gray-500 uppercase">Teklif artış katı</span>
+                        <span class="block text-[11px] font-bold text-gray-400 mb-2">Teklifler bu tutarın katları olarak verilir.</span>
+                        <div class="flex items-center gap-2">
+                            <input id="setting-bid-step" type="number" value="{{ settings.bid_step }}" class="w-full border border-gray-200 rounded-xl p-3 text-sm" placeholder="Teklif katı">
+                            <span class="text-xs font-black text-gray-500">TL</span>
+                        </div>
+                    </label>
+                    <label class="block rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                        <span class="block text-[10px] font-black text-gray-500 uppercase">Sohbet bekleme süresi</span>
+                        <span class="block text-[11px] font-bold text-gray-400 mb-2">Aynı kullanıcıya mesaj atarken spam koruma süresi.</span>
+                        <div class="flex items-center gap-2">
+                            <input id="setting-chat-spam" type="number" value="{{ settings.chat_spam_seconds }}" class="w-full border border-gray-200 rounded-xl p-3 text-sm" placeholder="Sohbet spam saniyesi">
+                            <span class="text-xs font-black text-gray-500">sn</span>
+                        </div>
+                    </label>
+                    <label class="block rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                        <span class="block text-[10px] font-black text-gray-500 uppercase">Varsayılan ilan süresi</span>
+                        <span class="block text-[11px] font-bold text-gray-400 mb-2">Yeni ilan açılırken otomatik seçilecek süre.</span>
+                    <select id="setting-default-duration" class="w-full border border-gray-200 rounded-xl p-3 text-sm">
+                        <option value="1" {% if settings.default_duration_days == 1 %}selected{% endif %}>1 Gün</option>
+                        <option value="7" {% if settings.default_duration_days == 7 %}selected{% endif %}>7 Gün</option>
+                        <option value="30" {% if settings.default_duration_days == 30 %}selected{% endif %}>1 Ay</option>
+                        <option value="90" {% if settings.default_duration_days == 90 %}selected{% endif %}>3 Ay</option>
+                        <option value="180" {% if settings.default_duration_days == 180 %}selected{% endif %}>6 Ay</option>
+                    </select>
+                    </label>
+                    <label class="block rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                        <span class="block text-[10px] font-black text-gray-500 uppercase">Maksimum fotoğraf</span>
+                        <span class="block text-[11px] font-bold text-gray-400 mb-2">Bir ilana eklenebilecek en fazla görsel sayısı.</span>
+                        <div class="flex items-center gap-2">
+                            <input id="setting-max-images" type="number" value="{{ settings.max_images }}" class="w-full border border-gray-200 rounded-xl p-3 text-sm" placeholder="Maksimum fotoğraf">
+                            <span class="text-xs font-black text-gray-500">adet</span>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm font-bold text-gray-600 bg-gray-50 rounded-xl p-3">
+                        <input id="setting-maintenance" type="checkbox" {% if settings.maintenance_mode %}checked{% endif %} class="accent-indigo-900"> Bakım modu
+                    </label>
+                    <button onclick="saveSettings()" class="w-full bg-indigo-900 hover:bg-black text-white py-3 rounded-xl text-sm font-black transition">Ayarları Kaydet</button>
+                    <div class="grid grid-cols-3 gap-2 pt-2">
+                        <a href="/admin/export/users" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-center py-2 rounded-xl text-[10px] font-black">Üye CSV</a>
+                        <a href="/admin/export/products" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-center py-2 rounded-xl text-[10px] font-black">İlan CSV</a>
+                        <a href="/admin/export/bids" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-center py-2 rounded-xl text-[10px] font-black">Teklif CSV</a>
+                    </div>
+                    <button onclick="createBackup()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl text-sm font-black transition"><i class="fa-solid fa-database mr-2"></i>Yedek Al</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h2 class="text-xl font-black text-gray-800 flex items-center">
+                        <i class="fa-solid fa-boxes-stacked mr-3 text-indigo-600"></i>İlan Yönetimi
+                    </h2>
+                    <input type="text" id="productAdminSearch" oninput="filterAdminTable('productAdminSearch', 'adminProductsTable')" placeholder="İlan ara..." class="border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none">
+                </div>
+                {% if can_manage %}
+                <div class="px-6 py-3 border-b border-gray-50 bg-indigo-50/40 flex flex-wrap items-center gap-2">
+                    <button onclick="toggleAllProductSelection(this)" class="bg-white text-indigo-700 border border-indigo-100 px-3 py-2 rounded-xl text-[10px] font-black">Tümünü Seç</button>
+                    <button onclick="bulkProductAction('approve')" class="bg-green-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Seçili Onayla</button>
+                    <button onclick="bulkProductAction('feature')" class="bg-indigo-900 text-white px-3 py-2 rounded-xl text-[10px] font-black">Seçili Öne Çıkar</button>
+                    <button onclick="bulkProductAction('hide')" class="bg-gray-800 text-white px-3 py-2 rounded-xl text-[10px] font-black">Seçili Gizle</button>
+                    <button onclick="bulkProductAction('show')" class="bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-[10px] font-black">Seçili Göster</button>
+                    <button onclick="bulkProductAction('reject')" class="bg-orange-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Seçili Reddet</button>
+                    <button onclick="bulkProductAction('delete')" class="bg-red-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Seçili Sil</button>
+                    <span id="selectedProductCount" class="text-[10px] font-black text-indigo-700 ml-auto">0 seçili</span>
+                </div>
+                {% endif %}
+                <div class="overflow-x-auto max-h-96 custom-scrollbar">
+                    <table class="w-full text-left border-collapse" id="adminProductsTable">
+                        <thead class="bg-gray-50 sticky top-0 z-10">
+                            <tr class="text-gray-400 text-xs font-black uppercase tracking-widest border-b border-gray-100">
+                                <th class="p-4 w-10"></th>
+                                <th class="p-4">İlan</th>
+                                <th class="p-4">Sahip</th>
+                                <th class="p-4">Durum</th>
+                                <th class="p-4 text-center">Teklif/Sohbet/Rapor</th>
+                                <th class="p-4 text-right">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            {% for product in products %}
+                            <tr id="admin-product-row-{{ product.id }}" class="hover:bg-indigo-50/30">
+                                <td class="p-4">
+                                    {% if can_manage %}
+                                    <input type="checkbox" class="admin-product-select accent-indigo-900" value="{{ product.id }}" onchange="updateSelectedProductCount()">
+                                    {% endif %}
+                                </td>
+                                <td class="p-4">
+                                    <p class="font-black text-gray-800">{{ product.title }}</p>
+                                    <p class="text-[10px] text-gray-400 font-bold">Son teklif: {{ product.current_bid }} ₺ | Kalan: {{ product.remaining }}</p>
+                                </td>
+                                <td class="p-4 text-sm font-bold text-gray-600">{{ product.owner_name }}</td>
+                                <td class="p-4">
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase {% if product.status == 'active' %}bg-green-100 text-green-700{% elif product.status == 'pending_admin_approval' %}bg-yellow-100 text-yellow-700{% elif product.status == 'completed' %}bg-blue-100 text-blue-700{% else %}bg-orange-100 text-orange-700{% endif %}">{{ product.status_label }}</span>
+                                    {% if product.is_hidden %}<span class="px-2 py-1 rounded-full text-[9px] font-black bg-gray-200 text-gray-700">GİZLİ</span>{% endif %}
+                                    {% if product.is_featured %}<span class="px-2 py-1 rounded-full text-[9px] font-black bg-indigo-100 text-indigo-700">ÖNE ÇIKAN</span>{% endif %}
+                                    {% if product.image_flagged %}<span class="px-2 py-1 rounded-full text-[9px] font-black bg-red-100 text-red-700">GÖRSEL</span>{% endif %}
+                                </td>
+                                <td class="p-4 text-center">
+                                    <span class="text-xs bg-orange-50 text-orange-600 px-2 py-1 rounded-md font-bold">{{ product.bid_count }}</span>
+                                    <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-md font-bold">{{ product.message_count }}</span>
+                                    <span class="text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded-md font-bold">{{ product.view_count }}</span>
+                                    <span class="text-xs bg-pink-50 text-pink-600 px-2 py-1 rounded-md font-bold">{{ product.favorite_count }}</span>
+                                    <span class="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-md font-bold">{{ product.report_count }}</span>
+                                </td>
+                                <td class="p-4 text-right space-x-1">
+                                    {% if can_manage %}
+                                    {% if product.status == 'pending_admin_approval' %}
+                                    <button data-product-id="{{ product.id }}" onclick="approveProductFromButton(this)" class="text-green-600 hover:text-green-800 font-black text-xs p-2 hover:bg-green-50 rounded-lg"><i class="fa-solid fa-check mr-1"></i>Onayla</button>
+                                    <button data-product-id="{{ product.id }}" onclick="rejectProductFromButton(this)" class="text-red-600 hover:text-red-800 font-black text-xs p-2 hover:bg-red-50 rounded-lg"><i class="fa-solid fa-xmark mr-1"></i>Reddet</button>
+                                    {% endif %}
+                                    <button data-product-id="{{ product.id }}" onclick="toggleProductEditFromButton(this)" class="text-indigo-600 hover:text-indigo-800 font-black text-xs p-2 hover:bg-indigo-50 rounded-lg"><i class="fa-solid fa-pen mr-1"></i>Düzenle</button>
+                                    <button data-product-id="{{ product.id }}" onclick="toggleProductFeaturedFromButton(this)" class="{% if product.is_featured %}text-indigo-700{% else %}text-gray-600{% endif %} hover:text-indigo-900 font-black text-xs p-2 hover:bg-indigo-50 rounded-lg"><i class="fa-solid fa-star mr-1"></i>{{ 'Önden Al' if product.is_featured else 'Öne Çıkar' }}</button>
+                                    <button data-product-id="{{ product.id }}" onclick="toggleProductHiddenFromButton(this)" class="{% if product.is_hidden %}text-green-600{% else %}text-gray-600{% endif %} hover:text-black font-black text-xs p-2 hover:bg-gray-50 rounded-lg"><i class="fa-solid fa-eye-slash mr-1"></i>{{ 'Göster' if product.is_hidden else 'Gizle' }}</button>
+                                    <button data-product-id="{{ product.id }}" onclick="toggleProductImageFlagFromButton(this)" class="{% if product.image_flagged %}text-red-600{% else %}text-orange-600{% endif %} hover:text-red-800 font-black text-xs p-2 hover:bg-red-50 rounded-lg"><i class="fa-solid fa-image mr-1"></i>Görsel</button>
+                                    <button data-product-id="{{ product.id }}" onclick="deleteProductFromButton(this)" class="text-red-500 hover:text-red-700 font-black text-xs p-2 hover:bg-red-50 rounded-lg"><i class="fa-solid fa-trash-can mr-1"></i>Sil</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr id="product-edit-row-{{ product.id }}" class="hidden bg-indigo-50/40">
+                                <td colspan="6" class="p-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <input id="product-edit-title-{{ product.id }}" value="{{ product.title }}" class="border border-indigo-100 rounded-xl p-3 text-sm" placeholder="İlan başlığı">
+                                        <input id="product-edit-desc-{{ product.id }}" class="border border-indigo-100 rounded-xl p-3 text-sm md:col-span-2" placeholder="Açıklama">
+                                        <button data-product-id="{{ product.id }}" onclick="saveProductEditFromButton(this)" class="bg-indigo-900 text-white rounded-xl py-2 text-xs font-black">Kaydet</button>
+                                        <input id="product-hide-reason-{{ product.id }}" value="{{ product.moderation_reason }}" class="border border-indigo-100 rounded-xl p-3 text-sm md:col-span-2" placeholder="Gizleme/görsel notu">
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 class="text-xl font-black text-gray-800 flex items-center mb-5">
+                    <i class="fa-solid fa-bullhorn mr-3 text-indigo-600"></i>Duyuru
+                </h2>
+                <div class="space-y-3">
+                    <input id="announcement-title" class="w-full border border-gray-200 rounded-xl p-3 text-sm" placeholder="Başlık">
+                    <textarea id="announcement-message" class="w-full border border-gray-200 rounded-xl p-3 text-sm h-24" placeholder="Ana sayfada görünecek duyuru"></textarea>
+                    <label class="flex items-center gap-2 text-sm font-bold text-gray-600">
+                        <input id="announcement-active" type="checkbox" checked class="accent-indigo-900"> Aktif yayınla
+                    </label>
+                    <button onclick="saveAnnouncement()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-xl text-sm font-black transition">Duyuru Yayınla</button>
+                </div>
+                <div class="mt-5 space-y-2">
+                    {% for announcement in announcements %}
+                    <div class="border border-gray-100 rounded-xl p-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-xs font-black text-gray-800">{{ announcement.title }}</p>
+                            <button data-announcement-id="{{ announcement.id }}" onclick="toggleAnnouncementFromButton(this)" class="text-[10px] font-black {% if announcement.is_active %}text-green-600{% else %}text-gray-400{% endif %}">
+                                {{ 'Aktif' if announcement.is_active else 'Pasif' }}
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-1">{{ announcement.created_at }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h2 class="text-xl font-black text-gray-800 flex items-center">
+                        <i class="fa-solid fa-comments mr-3 text-indigo-600"></i>Sohbet Moderasyon
+                    </h2>
+                    <input type="text" id="messageAdminSearch" oninput="filterAdminTable('messageAdminSearch', 'adminMessagesList')" placeholder="Mesaj ara..." class="border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none">
+                </div>
+                <div id="adminMessagesList" class="p-4 space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                    {% for message in messages %}
+                    <div id="admin-message-row-{{ message.id }}" class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-black text-gray-800">{{ message.user_name }} {% if message.is_admin %}<span class="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full ml-1">ADMIN</span>{% endif %}</p>
+                                <p class="text-sm text-gray-600 mt-1">{{ message.message }}</p>
+                                <p class="text-[10px] text-gray-400 mt-1">{{ message.product_title }} | {{ message.timestamp }} | Rapor: {{ message.report_count }}</p>
+                            </div>
+                            {% if can_manage %}
+                            <button data-message-id="{{ message.id }}" onclick="deleteMessageFromButton(this)" class="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg"><i class="fa-solid fa-trash-can"></i></button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-50">
+                    <h2 class="text-xl font-black text-gray-800 flex items-center">
+                        <i class="fa-solid fa-layer-group mr-3 text-indigo-600"></i>Kategori Performansı
+                    </h2>
+                </div>
+                <div class="p-4 space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                    {% for category in category_stats %}
+                    <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-sm font-black text-gray-800">{{ category.category }}</p>
+                            <p class="text-xs font-black text-orange-600">{{ category.product_count }} ilan</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[10px] font-bold text-gray-500">
+                            <span>Teklif: {{ category.bid_count }}</span>
+                            <span>Ortalama: {{ category.average_bid }} ₺</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-50 flex items-center justify-between gap-4">
+                <h2 class="text-xl font-black text-gray-800 flex items-center">
+                    <i class="fa-solid fa-shield-halved mr-3 text-red-600"></i>Raporlar
+                </h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-black text-gray-400">{{ reports | length }} kayıt</span>
+                    <button onclick="filterReportsByType('')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-[10px] font-black">Tümü</button>
+                    <button onclick="filterReportsByType('product')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-[10px] font-black">İlan Şikayetleri</button>
+                    <button onclick="filterReportsByType('user')" class="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-lg text-[10px] font-black">Kullanıcı</button>
+                    <button onclick="filterReportsByType('message')" class="bg-orange-50 hover:bg-orange-100 text-orange-700 px-3 py-2 rounded-lg text-[10px] font-black">Mesaj</button>
+                    {% if can_manage %}
+                    <button onclick="bulkResolveReports()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-[10px] font-black">Açık Raporları Kapat</button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="p-4 space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                {% if reports %}
+                    {% for report in reports %}
+                        <div id="report-row-{{ report.id }}" data-report-type="{{ report.target_type }}" class="border border-gray-100 rounded-2xl p-4 {% if report.status == 'open' %}bg-red-50/50{% else %}bg-gray-50 opacity-70{% endif %}">
+                            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+                                <div class="space-y-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-[10px] font-black uppercase px-2 py-1 rounded-full {% if report.target_type == 'message' %}bg-orange-100 text-orange-700{% elif report.target_type == 'user' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                                            {{ 'Mesaj' if report.target_type == 'message' else ('Kullanıcı' if report.target_type == 'user' else 'İlan') }}
+                                        </span>
+                                        <span class="text-[10px] font-black uppercase px-2 py-1 rounded-full {% if report.status == 'open' %}bg-red-600 text-white{% elif report.status == 'reviewing' %}bg-orange-500 text-white{% elif report.status == 'rejected' %}bg-gray-700 text-white{% else %}bg-gray-200 text-gray-600{% endif %}">
+                                            {{ report.status_label }}
+                                        </span>
+                                        <span class="text-[10px] text-gray-400 font-bold">{{ report.created_at }}</span>
+                                    </div>
+                                    <p class="text-sm font-black text-gray-800">{{ report.product_title }}</p>
+                                    {% if report.message_text %}
+                                        <p class="text-xs text-gray-500 bg-white rounded-xl p-2 border border-gray-100">Mesaj: {{ report.message_text }}</p>
+                                    {% endif %}
+                                    <p class="text-xs text-red-700 font-bold">Neden: {{ report.reason }}</p>
+                                    <p class="text-[10px] text-gray-400 font-bold">Raporlayan: {{ report.reporter_name }}</p>
+                                </div>
+                                {% if can_manage and report.status in ['open', 'reviewing'] %}
+                                    <div class="flex flex-wrap gap-2 lg:justify-end">
+                                        {% if report.product_id %}
+                                            <button data-product-id="{{ report.product_id }}" onclick="deleteProductFromButton(this)" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-[10px] font-black">İlanı Sil</button>
+                                        {% endif %}
+                                        {% if report.message_id %}
+                                            <button data-message-id="{{ report.message_id }}" onclick="deleteMessageFromButton(this)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg text-[10px] font-black">Mesajı Sil</button>
+                                        {% endif %}
+                                        {% if report.reported_user_id %}
+                                            <button data-user-id="{{ report.reported_user_id }}" onclick="banReportedUserFromButton(this)" class="bg-gray-800 hover:bg-black text-white px-3 py-2 rounded-lg text-[10px] font-black">Kullanıcıyı Banla</button>
+                                        {% endif %}
+                                        <button data-report-id="{{ report.id }}" onclick="markReportReviewingFromButton(this)" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg text-[10px] font-black">İncelemede</button>
+                                        <button data-report-id="{{ report.id }}" onclick="rejectReportFromButton(this)" class="bg-gray-700 hover:bg-black text-white px-3 py-2 rounded-lg text-[10px] font-black">Reddet</button>
+                                        <button data-report-id="{{ report.id }}" onclick="resolveReportFromButton(this)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-[10px] font-black">Kapat</button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center text-xs text-gray-400 italic py-8">Henüz rapor yok.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Üye Listesi ve Filtreleme -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 class="text-xl font-black text-gray-800 flex items-center">
+                    <i class="fa-solid fa-list-ul mr-3 text-indigo-600"></i>Üye Listesi
+                </h2>
+                <div class="relative w-full md:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="memberSearch" placeholder="Isim veya e-posta ile ara..." 
+                           class="w-full pl-11 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none">
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
+                    <select id="memberRiskFilter" onchange="filterMembers()" class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold">
+                        <option value="">Tum riskler</option>
+                        <option value="high">Yuksek</option>
+                        <option value="medium">Orta</option>
+                        <option value="low">Dusuk</option>
+                    </select>
+                    <select id="memberBanFilter" onchange="filterMembers()" class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold">
+                        <option value="">Tum durumlar</option>
+                        <option value="1">Banli</option>
+                        <option value="0">Aktif</option>
+                    </select>
+                    <select id="memberVerifyFilter" onchange="filterMembers()" class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold">
+                        <option value="">Dogrulama</option>
+                        <option value="phone">Telefon onayli</option>
+                    </select>
+                    <input id="memberCityFilter" oninput="filterMembers()" class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold" placeholder="Sehir">
+                </div>
+            </div>
+            <div class="overflow-x-auto max-h-96 custom-scrollbar">
+                <table class="w-full text-left border-collapse" id="userTable">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
+                        <tr class="text-gray-400 text-xs font-black uppercase tracking-widest border-b border-gray-100">
+                            <th class="p-4">Üye Bilgisi</th>
+                            <th class="p-4">Rol</th>
+                            <th class="p-4">Risk</th>
+                            <th class="p-4 text-center">Ilan/Teklif</th>
+                            <th class="p-4 text-center">Durum</th>
+                            <th class="p-4 text-right">Islemler</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        {% for user in users %}
+                        <tr class="hover:bg-indigo-50/30 transition-colors cursor-pointer group" 
+                            data-user-id="{{ user.id }}"
+                            data-risk="{{ user.risk.label }}"
+                            data-banned="{{ '1' if user.is_banned else '0' }}"
+                            data-phone="{{ '1' if user.phone_verified else '0' }}"
+                            data-city="{{ user.city or '' }}"
+                            onclick="showUserDetailsById(Number(this.dataset.userId))"
+                            id="user-row-{{ user.id }}">
+                            <td class="p-4">
+                                <div class="flex items-center space-x-3">
+                                    {% if user.profile_image %}
+                                    <img id="admin-user-avatar-{{ user.id }}" src="{{ user.profile_image }}" class="w-12 h-12 rounded-2xl object-cover bg-indigo-100 border border-indigo-100">
+                                    {% else %}
+                                    <div id="admin-user-avatar-{{ user.id }}" class="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                                        {{ user.name[0] | upper }}
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <p class="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">{{ user.name }}</p>
+                                        <p class="text-xs text-gray-500">{{ user.email }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-4">
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase {% if user.role == 'admin' %}bg-red-100 text-red-600{% else %}bg-green-100 text-green-600{% endif %}">
+                                    {{ user.role }}
+                                </span>
+                            </td>
+                            <td class="p-4">
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase {% if user.risk.label == 'Yüksek' %}bg-red-100 text-red-600{% elif user.risk.label == 'Orta' %}bg-orange-100 text-orange-600{% else %}bg-green-100 text-green-600{% endif %}">
+                                    {{ user.risk.label }}
+                                </span>
+                                <p class="text-[10px] text-gray-400 mt-1">Rapor {{ user.risk.report_count }} / Vazgeçme {{ user.risk.withdraw_count }}</p>
+                            </td>
+                            <td class="p-4 text-center">
+                                <div class="flex justify-center space-x-2">
+                                    <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-md font-bold">
+                                        <i class="fa-solid fa-tag mr-1"></i>{{ user.products | length }}
+                                    </span>
+                                    <span class="text-xs bg-orange-50 text-orange-600 px-2 py-1 rounded-md font-bold">
+                                        <i class="fa-solid fa-gavel mr-1"></i>{{ user.bids | length }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span id="ban-status-{{ user.id }}" class="px-3 py-1 rounded-full text-[10px] font-black uppercase {% if user.is_banned %}bg-gray-100 text-gray-600{% else %}bg-green-100 text-green-600{% endif %}">
+                                    {{ 'BANLI' if user.is_banned else 'AKTIF' }}
+                                </span>
+                            </td>
+                            <td class="p-4 text-right space-x-2" onclick="event.stopPropagation()">
+                                {% if can_manage and user.id != current_user.id %}
+                                    <button onclick="toggleBanFromButton(this)"
+                                            data-user-id="{{ user.id }}"
+                                            data-is-banned="{{ 'true' if user.is_banned else 'false' }}"
+                                            id="ban-btn-{{ user.id }}"
+                                            class="{% if user.is_banned %}text-green-500 hover:text-green-700{% else %}text-orange-500 hover:text-orange-700{% endif %} font-bold text-xs transition-colors p-2 hover:bg-gray-100 rounded-lg">
+                                        <i class="fa-solid {% if user.is_banned %}fa-unlock{% else %}fa-ban{% endif %} mr-1"></i> 
+                                        {{ 'Kaldir' if user.is_banned else 'Banla' }}
+                                    </button>
+                                    <button onclick="deleteUserFromButton(this)"
+                                            data-user-id="{{ user.id }}"
+                                            class="text-red-500 hover:text-red-700 font-bold text-xs transition-colors p-2 hover:bg-gray-100 rounded-lg">
+                                        <i class="fa-solid fa-trash-can mr-1"></i> Sil
+                                    </button>
+                                {% else %}
+                                    <span class="text-gray-300 text-[10px] italic font-bold">YÖNETİCİ</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Detay Bölümü (Kullanıcı Tıklandığında Açılır) -->
+        <div id="detailsSection" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-black text-gray-800">
+                    <span id="detailUserName" class="text-indigo-600">...</span> üyesinin Detayları
+                    <span id="detailUserEmail" class="text-sm font-normal text-gray-400 ml-4"></span>
+                </h2>
+                <button onclick="hideDetails()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-circle-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div id="userAdminTools" class="bg-white border border-gray-100 rounded-2xl p-4 mb-5"></div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Ilanlar (Sol) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="font-black text-gray-700 uppercase tracking-wider text-sm">
+                            <i class="fa-solid fa-tag mr-2 text-indigo-500"></i>Paylasilan Ilanlar
+                        </h3>
+                        <span id="productCount" class="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="productList" class="p-4 space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+                        <!-- Ilanlar buraya dinamik dolacak -->
+                    </div>
+                </div>
+
+                <!-- Teklifler (Sag) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="font-black text-gray-700 uppercase tracking-wider text-sm">
+                            <i class="fa-solid fa-gavel mr-2 text-indigo-500"></i>Verilen Teklifler
+                        </h3>
+                        <span id="bidCount" class="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="bidList" class="p-4 space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+                        <!-- Teklifler buraya dinamik dolacak -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-50">
+                <h2 class="text-xl font-black text-gray-800 flex items-center">
+                    <i class="fa-solid fa-scale-balanced mr-3 text-indigo-600"></i>İtirazlar
+                </h2>
+            </div>
+            <div class="p-4 space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                {% if appeals %}
+                    {% for appeal in appeals %}
+                    <div id="appeal-row-{{ appeal.id }}" class="p-4 rounded-2xl border border-gray-100 {% if appeal.status == 'open' %}bg-orange-50{% else %}bg-gray-50 opacity-70{% endif %}">
+                        <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-black text-gray-800">{{ appeal.user_name }}</p>
+                                <p class="text-xs text-gray-600 mt-1">{{ appeal.message }}</p>
+                                <p class="text-[10px] text-gray-400 mt-1">{{ appeal.created_at }} | {{ appeal.status }}</p>
+                                {% if appeal.admin_response %}
+                                    <p class="text-xs text-green-700 font-bold mt-2">Yanıt: {{ appeal.admin_response }}</p>
+                                {% endif %}
+                            </div>
+                            {% if can_manage and appeal.status == 'open' %}
+                            <div class="flex gap-2">
+                                <input id="appeal-response-{{ appeal.id }}" class="border border-gray-200 rounded-xl px-3 py-2 text-xs" placeholder="Yanıt">
+                                <button data-appeal-id="{{ appeal.id }}" onclick="resolveAppealFromButton(this)" class="bg-green-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Yanıtla</button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center text-xs text-gray-400 italic py-8">Henüz itiraz yok.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-50">
+                <h2 class="text-xl font-black text-gray-800 flex items-center">
+                    <i class="fa-solid fa-clock-rotate-left mr-3 text-indigo-600"></i>Admin İşlem Kayıtları
+                </h2>
+            </div>
+            <div class="p-4 space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                {% if logs %}
+                    {% for log in logs %}
+                    <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <div>
+                            <p class="text-sm font-black text-gray-800">{{ log.action }}</p>
+                            <p class="text-xs text-gray-500">{{ log.detail or 'Detay yok' }}</p>
+                        </div>
+                        <div class="text-left md:text-right">
+                            <p class="text-xs font-black text-indigo-600">{{ log.admin_name }}</p>
+                            <p class="text-[10px] text-gray-400">{{ log.created_at }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center text-xs text-gray-400 italic py-8">Henüz admin işlemi kaydedilmedi.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script type="application/json" id="admin-users-data">{{ users | tojson }}</script>
+    <script type="application/json" id="admin-page-state">{{ {"canManage": can_manage} | tojson }}</script>
+
+    <!-- JavaScript -->
+    <script>
+        const adminUsers = JSON.parse(document.getElementById('admin-users-data').textContent);
+        const adminUsersById = new Map(adminUsers.map(user => [user.id, user]));
+        const adminPageState = JSON.parse(document.getElementById('admin-page-state').textContent);
+        const canManage = adminPageState.canManage;
+        let adminQuickSearchTimer = null;
+
+        function adminEscapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        document.querySelectorAll('[data-bar-height]').forEach(bar => {
+            const height = Math.max(0, Math.min(100, Number(bar.dataset.barHeight) || 0));
+            bar.style.height = `${height}%`;
+        });
+
+        function showUserDetailsById(userId) {
+            const user = adminUsersById.get(userId);
+            if (user) showUserDetails(user);
+        }
+
+        function toggleBanFromButton(button) {
+            toggleBan(Number(button.dataset.userId), button.dataset.isBanned === 'true');
+        }
+
+        function deleteUserFromButton(button) {
+            deleteUser(Number(button.dataset.userId));
+        }
+
+        function approveProductFromButton(button) {
+            approveProduct(Number(button.dataset.productId));
+        }
+
+        function rejectProductFromButton(button) {
+            rejectProduct(Number(button.dataset.productId));
+        }
+
+        function toggleProductEditFromButton(button) {
+            toggleProductEdit(Number(button.dataset.productId));
+        }
+
+        function saveProductEditFromButton(button) {
+            saveProductEdit(Number(button.dataset.productId));
+        }
+
+        function toggleProductHiddenFromButton(button) {
+            toggleProductHidden(Number(button.dataset.productId));
+        }
+
+        function toggleProductFeaturedFromButton(button) {
+            toggleProductFeatured(Number(button.dataset.productId));
+        }
+
+        function toggleProductImageFlagFromButton(button) {
+            toggleProductImageFlag(Number(button.dataset.productId));
+        }
+
+        function deleteProductFromButton(button) {
+            deleteProduct(Number(button.dataset.productId), button);
+        }
+
+        function deleteMessageFromButton(button) {
+            deleteMessage(Number(button.dataset.messageId), button);
+        }
+
+        function banReportedUserFromButton(button) {
+            banReportedUser(Number(button.dataset.userId));
+        }
+
+        function resolveReportFromButton(button) {
+            resolveReport(Number(button.dataset.reportId));
+        }
+
+        function markReportReviewingFromButton(button) {
+            updateReportStatus(Number(button.dataset.reportId), 'reviewing');
+        }
+
+        function rejectReportFromButton(button) {
+            updateReportStatus(Number(button.dataset.reportId), 'rejected');
+        }
+
+        function toggleAnnouncementFromButton(button) {
+            toggleAnnouncement(Number(button.dataset.announcementId));
+        }
+
+        function resolveAppealFromButton(button) {
+            resolveAppeal(Number(button.dataset.appealId));
+        }
+
+        function filterAdminTable(inputId, containerId) {
+            const term = document.getElementById(inputId).value.toLowerCase();
+            const container = document.getElementById(containerId);
+            container.querySelectorAll('tbody tr, div[id^="admin-message-row-"]').forEach(row => {
+                row.classList.toggle('hidden', !row.textContent.toLowerCase().includes(term));
+            });
+        }
+
+        function scheduleAdminQuickSearch() {
+            clearTimeout(adminQuickSearchTimer);
+            adminQuickSearchTimer = setTimeout(runAdminQuickSearch, 250);
+        }
+
+        async function runAdminQuickSearch() {
+            const input = document.getElementById('adminQuickSearchInput');
+            const results = document.getElementById('adminQuickResults');
+            const query = input.value.trim();
+            if (query.length < 2) {
+                results.innerHTML = '';
+                return;
+            }
+            results.innerHTML = '<p class="text-xs font-bold text-gray-400">Aranıyor...</p>';
+            const response = await fetch(`/api/admin/quick_search?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            if (!data.success) {
+                results.innerHTML = '<p class="text-xs font-bold text-red-500">Arama yapılamadı.</p>';
+                return;
+            }
+            if (!data.items.length) {
+                results.innerHTML = '<p class="text-xs font-bold text-gray-400">Sonuç yok.</p>';
+                return;
+            }
+            results.innerHTML = data.items.map(item => `
+                <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4 flex flex-col gap-3">
+                    <div class="min-w-0">
+                        <span class="inline-flex items-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-gray-500 uppercase">${item.type === 'user' ? 'Üye' : 'İlan'}</span>
+                        <p class="mt-2 text-sm font-black text-gray-800 break-words">${adminEscapeHtml(item.title)}</p>
+                        <p class="text-[11px] font-bold text-gray-500 break-words">${adminEscapeHtml(item.subtitle)}</p>
+                        <p class="mt-1 text-[10px] font-black text-indigo-600">${adminEscapeHtml(item.status)}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${item.type === 'user' ? `
+                            <button onclick="showUserDetailsById(${item.id})" class="bg-indigo-900 text-white px-3 py-2 rounded-lg text-[10px] font-black">Detay</button>
+                            <button onclick="quickToggleUserBan(${item.id}, '${adminEscapeHtml(item.status)}')" class="bg-orange-50 text-orange-700 px-3 py-2 rounded-lg text-[10px] font-black">Ban / Aç</button>
+                        ` : `
+                            <button onclick="quickApproveProduct(${item.id})" class="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-[10px] font-black">Onayla</button>
+                            <button onclick="toggleProductHidden(${item.id})" class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-[10px] font-black">Gizle / Göster</button>
+                            <button onclick="toggleProductFeatured(${item.id})" class="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg text-[10px] font-black">Öne Çıkar</button>
+                            <button onclick="quickDeleteProduct(${item.id})" class="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-[10px] font-black">Sil</button>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function quickToggleUserBan(userId, status) {
+            const isBanned = status.toLowerCase().includes('ban');
+            await toggleBan(userId, isBanned);
+        }
+
+        async function quickApproveProduct(productId) {
+            await approveProduct(productId);
+        }
+
+        async function quickDeleteProduct(productId) {
+            if (!(await showAdminConfirm('Bu ilanı silmek istediğinize emin misiniz?'))) return;
+            const response = await fetch(`/api/delete_product/${productId}`, { method: 'DELETE' });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('İlan silindi.');
+                await runAdminQuickSearch();
+            } else {
+                showAdminNotice(result.message || 'İlan silinemedi.', 'error');
+            }
+        }
+
+        function filterReportsByType(type) {
+            document.querySelectorAll('[id^="report-row-"]').forEach(row => {
+                row.classList.toggle('hidden', Boolean(type) && row.dataset.reportType !== type);
+            });
+        }
+
+        // Üye Arama Filtreleme
+        document.getElementById('memberSearch').addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#userTable tbody tr');
+            
+            rows.forEach(row => {
+                const name = row.querySelector('p.font-bold').textContent.toLowerCase();
+                const email = row.querySelector('p.text-xs').textContent.toLowerCase();
+                if (name.includes(term) || email.includes(term)) {
+                    row.classList.remove('hidden');
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+        });
+
+        function filterMembers() {
+            const term = document.getElementById('memberSearch').value.toLowerCase();
+            const risk = document.getElementById('memberRiskFilter').value;
+            const ban = document.getElementById('memberBanFilter').value;
+            const verify = document.getElementById('memberVerifyFilter').value;
+            const city = document.getElementById('memberCityFilter').value.toLowerCase();
+            document.querySelectorAll('#userTable tbody tr').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const riskText = (row.dataset.risk || '').toLowerCase();
+                const riskMatches = !risk
+                    || (risk === 'high' && (riskText.includes('ksek') || riskText.includes('yuk')))
+                    || (risk === 'medium' && riskText.includes('orta'))
+                    || (risk === 'low' && (riskText.includes('dus') || riskText.includes('düs') || riskText.includes('d��')));
+                const verifyMatches = !verify || (verify === 'phone' && row.dataset.phone === '1');
+                const matches = (!term || text.includes(term))
+                    && riskMatches
+                    && (!ban || row.dataset.banned === ban)
+                    && verifyMatches
+                    && (!city || (row.dataset.city || '').toLowerCase().includes(city));
+                row.classList.toggle('hidden', !matches);
+            });
+        }
+
+        document.getElementById('memberSearch').addEventListener('input', filterMembers);
+
+        function showUserDetails(user) {
+            document.getElementById('detailsSection').classList.remove('hidden');
+            document.getElementById('detailUserName').textContent = user.name;
+            document.getElementById('detailUserEmail').textContent = user.email;
+            document.getElementById('productCount').textContent = user.products.length;
+            document.getElementById('bidCount').textContent = user.bids.length;
+            document.getElementById('userAdminTools').innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div class="flex items-center gap-3">
+                        ${user.profile_image ? `<img id="admin-detail-avatar-${user.id}" src="${user.profile_image}" class="w-24 h-24 rounded-2xl object-cover bg-gray-100 border border-gray-100">` : `<div id="admin-detail-avatar-${user.id}" class="w-24 h-24 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-3xl font-black">${user.name.charAt(0).toUpperCase()}</div>`}
+                        <div>
+                            <p class="text-xs font-black text-gray-400 uppercase mb-2">Profil Fotoğrafı</p>
+                            ${user.profile_image && canManage ? `<button onclick="removeUserProfilePhoto(${user.id})" class="bg-red-50 text-red-700 px-3 py-2 rounded-xl text-[10px] font-black"><i class="fa-solid fa-trash-can mr-1"></i>Kaldır</button>` : '<p class="text-[10px] text-gray-400 font-bold">Fotoğraf yok</p>'}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-black text-gray-400 uppercase mb-2">Güven</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black ${user.risk.label === 'Yüksek' ? 'bg-red-100 text-red-600' : user.risk.label === 'Orta' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}">${user.risk.label}</span>
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black ${user.phone_verified ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}">Telefon ${user.phone_verified ? 'Onaylı' : 'Onaysız'}</span>
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black bg-blue-100 text-blue-600">Puan ${user.rating.average || 0} (${user.rating.count || 0})</span>
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black bg-yellow-100 text-yellow-700">Uyarı ${user.warning_count || 0}</span>
+                            ${user.chat_banned ? '<span class="px-3 py-1 rounded-full text-[10px] font-black bg-red-100 text-red-600">Sohbet Banlı</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 items-start">
+                        <button onclick="toggleUserVerification(${user.id}, 'phone_verified')" class="bg-green-50 text-green-700 px-3 py-2 rounded-xl text-[10px] font-black">Telefon Doğrula</button>
+                        <button onclick="warnUser(${user.id})" class="bg-yellow-50 text-yellow-700 px-3 py-2 rounded-xl text-[10px] font-black">Uyarı Gönder</button>
+                        <button onclick="toggleChatBan(${user.id})" class="bg-red-50 text-red-700 px-3 py-2 rounded-xl text-[10px] font-black">${user.chat_banned ? 'Sohbet Banını Kaldır' : 'Sohbet Banı Ver'}</button>
+                    </div>
+                    <div>
+                        <div class="flex gap-2">
+                            <input id="admin-note-${user.id}" class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs" placeholder="Admin notu">
+                            <button onclick="addAdminNote(${user.id})" class="bg-indigo-900 text-white px-3 py-2 rounded-xl text-[10px] font-black">Ekle</button>
+                        </div>
+                        <div class="mt-2 space-y-1">${(user.notes || []).map(note => `<p class="text-[10px] text-gray-500 bg-gray-50 rounded-lg px-2 py-1">${note.note}</p>`).join('') || '<p class="text-[10px] text-gray-400 italic">Not yok.</p>'}</div>
+                    </div>
+                </div>
+            `;
+
+            // Ilanlari Doldur
+            const productList = document.getElementById('productList');
+            productList.innerHTML = '';
+            if (user.products.length === 0) {
+                productList.innerHTML = '<p class="text-center text-gray-400 py-8 italic">Bu üye henüz ilan paylaşmamış.</p>';
+            } else {
+                user.products.forEach(p => {
+                    productList.innerHTML += `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 group hover:border-indigo-200 transition-all">
+                            <div>
+                                <p class="font-bold text-gray-800">${p.title}</p>
+                                <p class="text-[10px] text-gray-500">Başlangıç: ${p.start_price} ₺ | En Yüksek: ${p.current_bid} ₺</p>
+                            </div>
+                            ${canManage ? `<button onclick="deleteProduct(${p.id}, this)" class="text-red-400 hover:text-red-600 p-2 transition-opacity">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            // Teklifleri Doldur
+            const bidList = document.getElementById('bidList');
+            bidList.innerHTML = '';
+            if (user.bids.length === 0) {
+                bidList.innerHTML = '<p class="text-center text-gray-400 py-8 italic">Bu üye henüz teklif vermemiş.</p>';
+            } else {
+                user.bids.forEach(b => {
+                    bidList.innerHTML += `
+                        <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 group hover:border-indigo-200 transition-all">
+                            <div class="flex justify-between items-center mb-1">
+                                <p class="font-bold text-indigo-600">${b.amount} ₺</p>
+                                <div class="flex items-center space-x-2">
+                                    <p class="text-[10px] text-gray-400">${b.timestamp}</p>
+                                    ${canManage ? `<button onclick="deleteBid(${b.id}, this)" class="text-red-400 hover:text-red-600 p-1 transition-opacity">
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>` : ''}
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-600 font-medium">Ürün: <span class="text-gray-800">${b.product_title}</span></p>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Scroll to details
+            document.getElementById('detailsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideDetails() {
+            document.getElementById('detailsSection').classList.add('hidden');
+        }
+
+        function showAdminNotice(message, type = 'success') {
+            const oldNotice = document.getElementById('admin-screen-notice');
+            if (oldNotice) oldNotice.remove();
+
+            const notice = document.createElement('div');
+            notice.id = 'admin-screen-notice';
+            const colorClass = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+            const iconClass = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+            notice.className = `fixed top-24 left-1/2 -translate-x-1/2 z-[120] ${colorClass} text-white px-6 py-3 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-2 transition-all duration-300 opacity-0 -translate-y-3`;
+            notice.innerHTML = `<i class="fa-solid ${iconClass}"></i><span>${message}</span>`;
+            document.body.appendChild(notice);
+
+            requestAnimationFrame(() => {
+                notice.classList.remove('opacity-0', '-translate-y-3');
+                notice.classList.add('opacity-100', 'translate-y-0');
+            });
+
+            setTimeout(() => {
+                notice.classList.add('opacity-0', '-translate-y-3');
+                setTimeout(() => notice.remove(), 300);
+            }, 2200);
+        }
+
+        function showAdminConfirm(message, confirmLabel = 'Evet', cancelLabel = 'Hayır') {
+            const oldConfirm = document.getElementById('admin-inline-confirm');
+            if (oldConfirm) oldConfirm.remove();
+
+            return new Promise(resolve => {
+                const panel = document.createElement('div');
+                panel.id = 'admin-inline-confirm';
+                panel.className = 'fixed top-24 left-1/2 -translate-x-1/2 z-[130] bg-white border border-red-200 shadow-2xl rounded-2xl p-4 w-[calc(100%-2rem)] max-w-md';
+                panel.innerHTML = `
+                    <p class="text-sm font-black text-gray-800 mb-3">${message}</p>
+                    <div class="flex gap-2">
+                        <button data-confirm="yes" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl font-black text-xs transition">${confirmLabel}</button>
+                        <button data-confirm="no" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-xl font-black text-xs transition">${cancelLabel}</button>
+                    </div>
+                `;
+                document.body.appendChild(panel);
+
+                panel.querySelector('[data-confirm="yes"]').addEventListener('click', () => {
+                    panel.remove();
+                    resolve(true);
+                });
+                panel.querySelector('[data-confirm="no"]').addEventListener('click', () => {
+                    panel.remove();
+                    resolve(false);
+                });
+            });
+        }
+
+        function getSelectedProductIds() {
+            return Array.from(document.querySelectorAll('.admin-product-select:checked')).map(input => Number(input.value)).filter(Boolean);
+        }
+
+        function updateSelectedProductCount() {
+            const label = document.getElementById('selectedProductCount');
+            if (label) label.textContent = `${getSelectedProductIds().length} seçili`;
+        }
+
+        function toggleAllProductSelection(button) {
+            const inputs = Array.from(document.querySelectorAll('.admin-product-select'));
+            const shouldSelect = inputs.some(input => !input.checked);
+            inputs.forEach(input => { input.checked = shouldSelect; });
+            button.textContent = shouldSelect ? 'Seçimi Kaldır' : 'Tümünü Seç';
+            updateSelectedProductCount();
+        }
+
+        async function bulkProductAction(action) {
+            const ids = getSelectedProductIds();
+            if (!ids.length) {
+                showAdminNotice('Önce ilan seçmelisiniz.', 'error');
+                return;
+            }
+            const labels = {
+                approve: 'onaylamak',
+                reject: 'reddetmek',
+                feature: 'öne çıkarmak',
+                unfeature: 'öne çıkarmayı kaldırmak',
+                hide: 'gizlemek',
+                show: 'görünür yapmak',
+                delete: 'silmek'
+            };
+            if (!(await showAdminConfirm(`${ids.length} ilanı ${labels[action] || 'işlemek'} istediğinize emin misiniz?`))) return;
+            const reason = '';
+            const response = await fetch('/api/admin/bulk_products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_ids: ids, action, reason })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice(`${result.changed} ilan güncellendi.`);
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Toplu işlem yapılamadı.', 'error');
+            }
+        }
+
+        async function toggleBan(userId, isCurrentlyBanned) {
+            const endpoint = isCurrentlyBanned ? `/api/unban_user/${userId}` : `/api/ban_user/${userId}`;
+            const method = 'POST';
+
+            if (!(await showAdminConfirm(`Bu üyeyi ${isCurrentlyBanned ? 'etkinleştirmek' : '1 hafta süreyle banlamak'} istediğinize emin misiniz?`))) return;
+
+            try {
+                const response = await fetch(endpoint, { method });
+                const result = await response.json();
+
+                if (result.success) {
+                    showAdminNotice('Islem tamamlandi.');
+                    setTimeout(() => location.reload(), 700);
+                } else {
+                    showAdminNotice(result.message || 'Islem tamamlanamadi.', 'error');
+                }
+            } catch (err) {
+                showAdminNotice('Islem sirasinda bir hata olustu.', 'error');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!(await showAdminConfirm('DİKKAT! Bu üyeyi silerseniz tüm ilanları ve teklifleri de silinecektir. Devam edilsin mi?'))) return;
+
+            try {
+                const response = await fetch(`/api/delete_user/${userId}`, { method: 'DELETE' });
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById(`user-row-${userId}`).remove();
+                    hideDetails();
+                    showAdminNotice('Üye silindi.');
+                } else {
+                    showAdminNotice(result.message || 'Üye silinemedi.', 'error');
+                }
+            } catch (err) {
+                showAdminNotice('Islem sirasinda bir hata olustu.', 'error');
+            }
+        }
+
+        async function deleteProduct(productId, btn) {
+            if (!(await showAdminConfirm('Bu ilani silmek istediginize emin misiniz?'))) return;
+
+            try {
+                const response = await fetch(`/api/delete_product/${productId}`, { method: 'DELETE' });
+                const result = await response.json();
+
+                if (result.success) {
+                    const reportRow = btn.closest('[id^="report-row-"]');
+                    if (reportRow) reportRow.remove();
+                    else if (btn.closest('tr')) btn.closest('tr').remove();
+                    else btn.closest('div.flex')?.remove();
+                    showAdminNotice('Ilan silindi.');
+                } else {
+                    showAdminNotice(result.message || 'Ilan silinemedi.', 'error');
+                }
+            } catch (err) {
+                showAdminNotice('Islem sirasinda bir hata olustu.', 'error');
+            }
+        }
+
+        async function deleteBid(bidId, btn) {
+            if (!(await showAdminConfirm('Bu teklifi silmek istediginize emin misiniz?'))) return;
+
+            try {
+                const response = await fetch(`/api/delete_bid/${bidId}`, { method: 'DELETE' });
+                const result = await response.json();
+
+                if (result.success) {
+                    btn.closest('div.p-3').remove();
+                    showAdminNotice('Teklif silindi.');
+                } else {
+                    showAdminNotice(result.message || 'Teklif silinemedi.', 'error');
+                }
+            } catch (err) {
+                showAdminNotice('Islem sirasinda bir hata olustu.', 'error');
+            }
+        }
+
+        async function deleteMessage(messageId, btn) {
+            if (!(await showAdminConfirm('Bu mesajı silmek istediğinize emin misiniz?'))) return;
+
+            try {
+                const response = await fetch(`/api/delete_message/${messageId}`, { method: 'DELETE' });
+                const result = await response.json();
+
+                if (result.success) {
+                    const reportRow = btn.closest('[id^="report-row-"]');
+                    if (reportRow) reportRow.remove();
+                    const messageRow = btn.closest('[id^="admin-message-row-"]');
+                    if (messageRow) messageRow.remove();
+                    showAdminNotice('Mesaj silindi.');
+                } else {
+                    showAdminNotice(result.message || 'Mesaj silinemedi.', 'error');
+                }
+            } catch (err) {
+                showAdminNotice('İşlem sırasında bir hata oluştu.', 'error');
+            }
+        }
+
+        function toggleProductEdit(productId) {
+            document.getElementById(`product-edit-row-${productId}`)?.classList.toggle('hidden');
+        }
+
+        async function saveProductEdit(productId) {
+            const response = await fetch(`/api/edit_product/${productId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: document.getElementById(`product-edit-title-${productId}`).value,
+                    description: document.getElementById(`product-edit-desc-${productId}`).value
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('İlan güncellendi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'İlan güncellenemedi.', 'error');
+            }
+        }
+
+        async function approveProduct(productId) {
+            const response = await fetch(`/api/approve_product/${productId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('İlan onaylandı.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'İlan onaylanamadı.', 'error');
+            }
+        }
+
+        async function rejectProduct(productId) {
+            const reasonEl = document.getElementById(`product-hide-reason-${productId}`);
+            const reason = reasonEl ? reasonEl.value : '';
+            if (!(await showAdminConfirm('Bu ilanı reddetmek istediğinize emin misiniz?'))) return;
+            const response = await fetch(`/api/reject_product/${productId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('İlan reddedildi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'İlan reddedilemedi.', 'error');
+            }
+        }
+
+        async function toggleProductFeatured(productId) {
+            const response = await fetch(`/api/toggle_product_featured/${productId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice(result.is_featured ? 'İlan öne çıkarıldı.' : 'Öne çıkarma kaldırıldı.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'İşlem başarısız.', 'error');
+            }
+        }
+
+        async function toggleProductHidden(productId) {
+            const reasonEl = document.getElementById(`product-hide-reason-${productId}`);
+            const response = await fetch(`/api/toggle_product_hidden/${productId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: reasonEl ? reasonEl.value : '' })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice(result.is_hidden ? 'İlan gizlendi.' : 'İlan görünür yapıldı.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'İşlem başarısız.', 'error');
+            }
+        }
+
+        async function toggleProductImageFlag(productId) {
+            const response = await fetch(`/api/toggle_product_image_flag/${productId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice(result.image_flagged ? 'Görsel işaretlendi.' : 'Görsel işareti kaldırıldı.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'İşlem başarısız.', 'error');
+            }
+        }
+
+        async function toggleChatBan(userId) {
+            const response = await fetch(`/api/toggle_chat_ban/${userId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('Sohbet banı güncellendi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Sohbet banı güncellenemedi.', 'error');
+            }
+        }
+
+        async function warnUser(userId) {
+            if (!(await showAdminConfirm('Bu kullanıcıya admin uyarısı göndermek istediğinize emin misiniz?'))) return;
+            const response = await fetch(`/api/admin/warn_user/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: 'Admin tarafından uyarıldınız. Lütfen site kurallarına dikkat edin.' })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice(`Uyarı gönderildi. Toplam uyarı: ${result.warning_count}`);
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Uyarı gönderilemedi.', 'error');
+            }
+        }
+
+        async function removeUserProfilePhoto(userId) {
+            if (!(await showAdminConfirm('Bu kullanıcının profil fotoğrafını kaldırmak istediğinize emin misiniz?'))) return;
+            const response = await fetch(`/api/admin/users/${userId}/profile_photo`, { method: 'DELETE' });
+            const result = await response.json();
+            if (!result.success) {
+                showAdminNotice(result.message || 'Profil fotoğrafı kaldırılamadı.', 'error');
+                return;
+            }
+            const user = adminUsersById.get(userId);
+            if (user) {
+                user.profile_image = null;
+                showUserDetails(user);
+            }
+            const rowAvatar = document.getElementById(`admin-user-avatar-${userId}`);
+            if (rowAvatar && user) {
+                rowAvatar.outerHTML = `<div id="admin-user-avatar-${userId}" class="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">${user.name.charAt(0).toUpperCase()}</div>`;
+            }
+            showAdminNotice('Profil fotoğrafı kaldırıldı.');
+        }
+
+        async function toggleUserVerification(userId, field) {
+            const response = await fetch(`/api/toggle_user_verification/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('Doğrulama güncellendi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Doğrulama güncellenemedi.', 'error');
+            }
+        }
+
+        async function addAdminNote(userId) {
+            const input = document.getElementById(`admin-note-${userId}`);
+            const response = await fetch('/api/admin_note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, note: input.value })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('Not eklendi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Not eklenemedi.', 'error');
+            }
+        }
+
+        async function resolveReport(reportId) {
+            try {
+                const response = await fetch(`/api/resolve_report/${reportId}`, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById(`report-row-${reportId}`)?.remove();
+                    showAdminNotice('Rapor kapatıldı.');
+                } else {
+                    showAdminNotice(result.message || 'Rapor kapatılamadı.', 'error');
+                }
+            } catch (err) {
+                showAdminNotice('İşlem sırasında bir hata oluştu.', 'error');
+            }
+        }
+
+        async function updateReportStatus(reportId, status) {
+            const response = await fetch(`/api/admin/report_status/${reportId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            const result = await response.json();
+            if (result.success) {
+                const messages = { reviewing: 'Rapor incelemeye alındı.', rejected: 'Rapor reddedildi.', open: 'Rapor tekrar açıldı.', resolved: 'Rapor kapatıldı.' };
+                showAdminNotice(messages[status] || 'Rapor güncellendi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Rapor güncellenemedi.', 'error');
+            }
+        }
+
+        async function banReportedUser(userId) {
+            if (!(await showAdminConfirm('Bu kullanıcıyı 1 hafta süreyle banlamak istediğinize emin misiniz?'))) return;
+
+            try {
+                const response = await fetch(`/api/ban_user/${userId}`, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success) {
+                    showAdminNotice('Kullanıcı banlandı.');
+                } else {
+                    showAdminNotice(result.message || 'Kullanıcı banlanamadı.', 'error');
+                }
+            } catch (err) {
+                showAdminNotice('İşlem sırasında bir hata oluştu.', 'error');
+            }
+        }
+
+        async function bulkResolveReports() {
+            const ids = Array.from(document.querySelectorAll('[id^="report-row-"]'))
+                .map(row => Number(row.id.replace('report-row-', '')))
+                .filter(Boolean);
+            if (!ids.length) {
+                showAdminNotice('Kapatılacak açık rapor yok.', 'error');
+                return;
+            }
+            if (!(await showAdminConfirm(`${ids.length} raporu kapatmak istediğinize emin misiniz?`))) return;
+
+            const response = await fetch('/api/bulk_resolve_reports', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ report_ids: ids })
+            });
+            const result = await response.json();
+            if (result.success) {
+                ids.forEach(id => document.getElementById(`report-row-${id}`)?.remove());
+                showAdminNotice(`${result.resolved} rapor kapatıldı.`);
+            } else {
+                showAdminNotice(result.message || 'Raporlar kapatılamadı.', 'error');
+            }
+        }
+
+        async function saveSettings() {
+            const payload = {
+                min_bid: document.getElementById('setting-min-bid').value,
+                bid_step: document.getElementById('setting-bid-step').value,
+                chat_spam_seconds: document.getElementById('setting-chat-spam').value,
+                default_duration_days: document.getElementById('setting-default-duration').value,
+                max_images: document.getElementById('setting-max-images').value
+                ,maintenance_mode: document.getElementById('setting-maintenance').checked
+            };
+            const response = await fetch('/api/admin_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            showAdminNotice(result.success ? 'Ayarlar kaydedildi.' : (result.message || 'Ayarlar kaydedilemedi.'), result.success ? 'success' : 'error');
+        }
+
+        async function saveAnnouncement() {
+            const payload = {
+                title: document.getElementById('announcement-title').value.trim(),
+                message: document.getElementById('announcement-message').value.trim(),
+                is_active: document.getElementById('announcement-active').checked
+            };
+            const response = await fetch('/api/admin_announcement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('Duyuru kaydedildi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Duyuru kaydedilemedi.', 'error');
+            }
+        }
+
+        async function toggleAnnouncement(announcementId) {
+            const response = await fetch(`/api/toggle_announcement/${announcementId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice('Duyuru durumu güncellendi.');
+                setTimeout(() => location.reload(), 700);
+            } else {
+                showAdminNotice(result.message || 'Duyuru güncellenemedi.', 'error');
+            }
+        }
+
+        async function createBackup() {
+            const response = await fetch('/api/admin_backup', { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                showAdminNotice(`Yedek alındı: ${result.filename}`);
+            } else {
+                showAdminNotice(result.message || 'Yedek alınamadı.', 'error');
+            }
+        }
+
+        async function resolveAppeal(appealId) {
+            const responseText = document.getElementById(`appeal-response-${appealId}`).value.trim();
+            if (!responseText) {
+                showAdminNotice('Yanıt boş olamaz.', 'error');
+                return;
+            }
+            const response = await fetch(`/api/resolve_appeal/${appealId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'resolved', admin_response: responseText })
+            });
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById(`appeal-row-${appealId}`)?.remove();
+                showAdminNotice('İtiraz yanıtlandı.');
+            } else {
+                showAdminNotice(result.message || 'İtiraz yanıtlanamadı.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

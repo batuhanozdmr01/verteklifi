@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verteklifi | Kategori Yönetimi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-indigo-900 text-white p-4 shadow-xl flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="bg-white p-2 rounded-lg">
+                <i class="fa-solid fa-sitemap text-indigo-900 text-xl"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-tighter">MENÜ <span class="text-indigo-300 font-light">KATEGORİLER</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="/admin" class="bg-indigo-700 text-white hover:bg-indigo-600 px-4 py-2 rounded-lg font-bold text-sm transition flex items-center">
+                <i class="fa-solid fa-gauge-high mr-2"></i>Admin Paneli
+            </a>
+            <a href="/" class="bg-white text-indigo-900 hover:bg-indigo-50 px-4 py-2 rounded-lg font-bold text-sm transition flex items-center">
+                <i class="fa-solid fa-house mr-2"></i>Siteye Dön
+            </a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6 space-y-6">
+        <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-black text-gray-800">Kategori Menü Yönetimi</h2>
+                    <p class="text-sm font-bold text-gray-400 mt-1">Ana sayfa sol menüsü ve “İlan Ver” formundaki kategori listesi buradan yönetilir.</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
+                    <div class="bg-indigo-50 rounded-2xl px-4 py-3">
+                        <p class="text-2xl font-black text-indigo-700">{{ category_count }}</p>
+                        <p class="text-[10px] font-black text-indigo-800 uppercase">Kategori</p>
+                    </div>
+                    <div class="bg-orange-50 rounded-2xl px-4 py-3">
+                        <p class="text-2xl font-black text-orange-700">{{ item_count }}</p>
+                        <p class="text-[10px] font-black text-orange-800 uppercase">Alt kategori</p>
+                    </div>
+                    <button onclick="addCategoryMenuCategory()" class="bg-indigo-900 hover:bg-black text-white rounded-2xl px-4 py-3 text-xs font-black transition">
+                        <i class="fa-solid fa-plus mr-2"></i>Kategori Ekle
+                    </button>
+                    <button onclick="saveCategoryMenu()" class="bg-green-600 hover:bg-green-700 text-white rounded-2xl px-4 py-3 text-xs font-black transition">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i>Kaydet
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6">
+            <aside class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit sticky top-24">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-black text-gray-800">Kategori Listesi</h3>
+                    <button onclick="resetCategoryMenu()" class="text-[10px] font-black text-gray-500 hover:text-red-600">Varsayılana dön</button>
+                </div>
+                <input id="categorySearch" oninput="renderCategoryMenu()" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Kategori ara...">
+                <div id="categoryMenuNav" class="space-y-2 max-h-[520px] overflow-y-auto custom-scrollbar"></div>
+            </aside>
+
+            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-5 border-b border-gray-50">
+                    <h3 class="text-lg font-black text-gray-800">Detaylı Düzenleme</h3>
+                    <p class="text-xs font-bold text-gray-400 mt-1">İkon alanına Font Awesome adı yaz: `fa-mobile-alt`, `fa-laptop`, `fa-shirt` gibi. Maksimum fiyat ilan verirken ürün limitidir.</p>
+                </div>
+                <div id="categoryMenuEditor" class="p-4 space-y-4 max-h-[calc(100vh-260px)] overflow-y-auto custom-scrollbar"></div>
+            </section>
+        </section>
+    </main>
+
+    <script type="application/json" id="admin-category-menu-data">{{ category_menu | tojson }}</script>
+    <script>
+        let adminCategoryMenu = JSON.parse(document.getElementById('admin-category-menu-data').textContent || '{}');
+
+        function adminEscapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function showAdminNotice(message, type = 'success') {
+            const oldNotice = document.getElementById('admin-screen-notice');
+            if (oldNotice) oldNotice.remove();
+            const notice = document.createElement('div');
+            notice.id = 'admin-screen-notice';
+            notice.className = `fixed top-24 left-1/2 -translate-x-1/2 z-[120] ${type === 'error' ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-2xl shadow-2xl font-black text-sm`;
+            notice.textContent = message;
+            document.body.appendChild(notice);
+            setTimeout(() => notice.remove(), 2400);
+        }
+
+        function showAdminConfirm(message) {
+            return Promise.resolve(true);
+        }
+
+        function collectCategoryMenuFromDom() {
+            const editedBlocks = new Map();
+            document.querySelectorAll('[data-category-block]').forEach(block => {
+                const originalName = block.dataset.categoryKey;
+                const categoryName = block.querySelector('[data-category-name]')?.value.trim();
+                if (!categoryName) return;
+                const items = [];
+                const seen = new Set();
+                block.querySelectorAll('[data-category-item]').forEach(item => {
+                    const name = item.querySelector('[data-item-name]')?.value.trim();
+                    if (!name || seen.has(name.toLowerCase())) return;
+                    const maxPrice = Math.max(1, Number(item.querySelector('[data-item-max]')?.value || 100000));
+                    const icon = (item.querySelector('[data-item-icon]')?.value.trim() || 'fa-tags').replace(/[^a-zA-Z0-9-]/g, '');
+                    items.push({ name, maxPrice, icon: icon || 'fa-tags' });
+                    seen.add(name.toLowerCase());
+                });
+                if (items.length) editedBlocks.set(originalName || categoryName, { name: categoryName, items });
+            });
+
+            const menu = {};
+            Object.keys(adminCategoryMenu || {}).forEach(originalName => {
+                if (editedBlocks.has(originalName)) {
+                    const edited = editedBlocks.get(originalName);
+                    menu[edited.name] = edited.items;
+                    editedBlocks.delete(originalName);
+                } else {
+                    menu[originalName] = adminCategoryMenu[originalName];
+                }
+            });
+            editedBlocks.forEach(edited => {
+                menu[edited.name] = edited.items;
+            });
+            return menu;
+        }
+
+        function renderCategoryMenu() {
+            const editor = document.getElementById('categoryMenuEditor');
+            const nav = document.getElementById('categoryMenuNav');
+            const term = document.getElementById('categorySearch')?.value.toLowerCase().trim() || '';
+            const keys = Object.keys(adminCategoryMenu || {});
+            const visibleKeys = keys.filter(key => !term || key.toLowerCase().includes(term));
+
+            nav.innerHTML = visibleKeys.map(key => `
+                <button onclick="document.getElementById('cat-block-${keys.indexOf(key)}')?.scrollIntoView({behavior:'smooth', block:'start'})" class="w-full text-left rounded-xl border border-gray-100 bg-gray-50 hover:bg-indigo-50 px-3 py-2">
+                    <span class="block text-xs font-black text-gray-800">${adminEscapeHtml(key)}</span>
+                    <span class="block text-[10px] font-bold text-gray-400">${(adminCategoryMenu[key] || []).length} alt kategori</span>
+                </button>
+            `).join('') || '<p class="text-xs text-gray-400 italic text-center py-6">Sonuç yok.</p>';
+
+            editor.innerHTML = visibleKeys.map(key => {
+                const categoryIndex = keys.indexOf(key);
+                const items = adminCategoryMenu[key] || [];
+                return `
+                    <div id="cat-block-${categoryIndex}" data-category-key="${adminEscapeHtml(key)}" data-category-block class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-[auto_1fr_120px] gap-2 mb-3">
+                            <div class="flex md:flex-col gap-1">
+                                <button onclick="moveCategoryMenuCategory(${categoryIndex}, -1)" class="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg px-3 py-2 text-[10px] font-black" title="Yukarı taşı"><i class="fa-solid fa-arrow-up"></i></button>
+                                <button onclick="moveCategoryMenuCategory(${categoryIndex}, 1)" class="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg px-3 py-2 text-[10px] font-black" title="Aşağı taşı"><i class="fa-solid fa-arrow-down"></i></button>
+                            </div>
+                            <input data-category-name value="${adminEscapeHtml(key)}" class="border border-gray-200 rounded-xl px-3 py-3 text-sm font-black bg-white" placeholder="Kategori adı">
+                            <button onclick="removeCategoryMenuCategory(${categoryIndex})" class="bg-red-50 text-red-600 rounded-xl px-3 py-2 text-[10px] font-black"><i class="fa-solid fa-trash-can mr-1"></i>Kaldır</button>
+                        </div>
+                        <div class="space-y-2">
+                            ${items.map((item, itemIndex) => `
+                                <div data-category-item class="grid grid-cols-1 lg:grid-cols-[70px_1fr_140px_160px_90px] gap-2 rounded-xl bg-white border border-gray-100 p-2">
+                                    <div class="flex gap-1">
+                                        <button onclick="moveCategoryMenuItem(${categoryIndex}, ${itemIndex}, -1)" class="flex-1 bg-gray-50 hover:bg-indigo-50 text-indigo-700 border border-gray-100 rounded-lg px-2 py-2 text-[10px] font-black" title="Yukarı taşı"><i class="fa-solid fa-arrow-up"></i></button>
+                                        <button onclick="moveCategoryMenuItem(${categoryIndex}, ${itemIndex}, 1)" class="flex-1 bg-gray-50 hover:bg-indigo-50 text-indigo-700 border border-gray-100 rounded-lg px-2 py-2 text-[10px] font-black" title="Aşağı taşı"><i class="fa-solid fa-arrow-down"></i></button>
+                                    </div>
+                                    <input data-item-name value="${adminEscapeHtml(item.name)}" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold" placeholder="Alt kategori / marka">
+                                    <input data-item-max type="number" value="${Number(item.maxPrice || 100000)}" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold" placeholder="Maks. fiyat">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid ${adminEscapeHtml(item.icon || 'fa-tags')} text-orange-600 w-5 text-center"></i>
+                                        <input data-item-icon value="${adminEscapeHtml(item.icon || 'fa-tags')}" class="min-w-0 flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold" placeholder="fa-tags">
+                                    </div>
+                                    <button onclick="removeCategoryMenuItem(${categoryIndex}, ${itemIndex})" class="bg-gray-100 text-gray-700 rounded-lg px-2 py-2 text-[10px] font-black">Sil</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="addCategoryMenuItem(${categoryIndex})" class="mt-3 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl px-3 py-2 text-[10px] font-black"><i class="fa-solid fa-plus mr-1"></i>Alt kategori ekle</button>
+                    </div>
+                `;
+            }).join('') || '<p class="text-center text-xs text-gray-400 italic py-8">Kategori bulunamadı.</p>';
+        }
+
+        function addCategoryMenuCategory() {
+            adminCategoryMenu = collectCategoryMenuFromDom();
+            let name = 'Yeni Kategori';
+            let index = 1;
+            while (adminCategoryMenu[name]) {
+                index += 1;
+                name = `Yeni Kategori ${index}`;
+            }
+            adminCategoryMenu[name] = [{ name: 'Diğer', maxPrice: 100000, icon: 'fa-tags' }];
+            renderCategoryMenu();
+        }
+
+        function removeCategoryMenuCategory(categoryIndex) {
+            adminCategoryMenu = collectCategoryMenuFromDom();
+            const key = Object.keys(adminCategoryMenu)[categoryIndex];
+            if (key) delete adminCategoryMenu[key];
+            renderCategoryMenu();
+        }
+
+        function moveCategoryMenuCategory(categoryIndex, direction) {
+            adminCategoryMenu = collectCategoryMenuFromDom();
+            const entries = Object.entries(adminCategoryMenu);
+            const nextIndex = categoryIndex + direction;
+            if (nextIndex < 0 || nextIndex >= entries.length) return;
+            const [entry] = entries.splice(categoryIndex, 1);
+            entries.splice(nextIndex, 0, entry);
+            adminCategoryMenu = Object.fromEntries(entries);
+            renderCategoryMenu();
+            setTimeout(() => document.getElementById(`cat-block-${nextIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+        }
+
+        function addCategoryMenuItem(categoryIndex) {
+            adminCategoryMenu = collectCategoryMenuFromDom();
+            const key = Object.keys(adminCategoryMenu)[categoryIndex];
+            if (!key) return;
+            adminCategoryMenu[key].push({ name: 'Yeni Alt Kategori', maxPrice: 100000, icon: adminCategoryMenu[key][0]?.icon || 'fa-tags' });
+            renderCategoryMenu();
+        }
+
+        function removeCategoryMenuItem(categoryIndex, itemIndex) {
+            adminCategoryMenu = collectCategoryMenuFromDom();
+            const key = Object.keys(adminCategoryMenu)[categoryIndex];
+            if (!key) return;
+            adminCategoryMenu[key].splice(itemIndex, 1);
+            if (!adminCategoryMenu[key].length) adminCategoryMenu[key].push({ name: 'Diğer', maxPrice: 100000, icon: 'fa-tags' });
+            renderCategoryMenu();
+        }
+
+        function moveCategoryMenuItem(categoryIndex, itemIndex, direction) {
+            adminCategoryMenu = collectCategoryMenuFromDom();
+            const key = Object.keys(adminCategoryMenu)[categoryIndex];
+            if (!key) return;
+            const items = adminCategoryMenu[key];
+            const nextIndex = itemIndex + direction;
+            if (nextIndex < 0 || nextIndex >= items.length) return;
+            const [item] = items.splice(itemIndex, 1);
+            items.splice(nextIndex, 0, item);
+            renderCategoryMenu();
+            setTimeout(() => document.getElementById(`cat-block-${categoryIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+        }
+
+        async function saveCategoryMenu() {
+            adminCategoryMenu = collectCategoryMenuFromDom();
+            const menuEntries = Object.entries(adminCategoryMenu).map(([name, items]) => ({ name, items }));
+            const response = await fetch('/api/admin/category_menu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ menu: adminCategoryMenu, menu_entries: menuEntries })
+            });
+            const result = await response.json();
+            if (result.success) {
+                adminCategoryMenu = result.menu;
+                renderCategoryMenu();
+                showAdminNotice('Kategori menüsü kaydedildi.');
+            } else {
+                showAdminNotice(result.message || 'Kategori menüsü kaydedilemedi.', 'error');
+            }
+        }
+
+        async function resetCategoryMenu() {
+            const response = await fetch('/api/admin/category_menu/reset', { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                adminCategoryMenu = result.menu;
+                renderCategoryMenu();
+                showAdminNotice('Kategori menüsü varsayılana döndü.');
+            } else {
+                showAdminNotice(result.message || 'Kategori menüsü sıfırlanamadı.', 'error');
+            }
+        }
+
+        renderCategoryMenu();
+    </script>
+</body>
+</html>
