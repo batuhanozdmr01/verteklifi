@@ -27,10 +27,11 @@
         }
         @media (max-width: 640px) {
             #notification-panel {
-                max-height: calc(100vh - 170px);
+                max-height: 100dvh;
+                border-radius: 0;
             }
             #notification-list {
-                max-height: calc(100vh - 235px);
+                max-height: calc(100dvh - 64px);
             }
             #current-category-title {
                 font-size: 1.35rem;
@@ -38,6 +39,20 @@
             }
             #product-container {
                 gap: 1rem;
+            }
+            #product-container > div {
+                border-radius: 1rem;
+            }
+            #product-container .group img,
+            #product-container .group [class*="h-40"] {
+                height: 9.5rem;
+            }
+            #product-container .group .p-4 {
+                padding: 0.85rem;
+            }
+            #product-container .group h3 {
+                font-size: 0.95rem;
+                line-height: 1.25rem;
             }
             #detail-page > nav {
                 flex-wrap: wrap;
@@ -83,8 +98,18 @@
             }
             #modal-messages .grid {
                 min-height: 0 !important;
-                height: calc(100dvh - 73px);
-                grid-template-rows: 38% 62%;
+                height: calc(100dvh - 65px);
+                grid-template-rows: 34% 66%;
+            }
+            #modal-messages > div > .p-6 {
+                padding: 0.9rem 1rem;
+            }
+            #private-chat-header {
+                position: sticky;
+                top: 0;
+                background: #fff;
+                z-index: 2;
+                padding: 0.75rem 1rem;
             }
             #private-conversation-list {
                 max-height: none !important;
@@ -100,9 +125,21 @@
             #private-chat-input {
                 min-width: 0;
             }
+            #modal-ilan .listing-step-bar {
+                display: grid;
+            }
+            #modal-ilan .listing-step-block {
+                scroll-margin-top: 1rem;
+            }
             #orders-content .flex,
             #profile-content .flex {
                 min-width: 0;
+            }
+            .mobile-profile-tabs {
+                display: grid;
+            }
+            .mobile-filter-summary:not(:empty) {
+                display: flex;
             }
             #sidebar {
                 width: min(86vw, 20rem);
@@ -211,6 +248,7 @@
                                     <div class="flex items-center gap-3">
                                         <button onclick="markNotificationsRead()" class="text-[10px] font-black text-orange-600">Okundu yap</button>
                                         <button onclick="deleteAllNotifications()" class="text-[10px] font-black text-red-600">Sil</button>
+                                        <button onclick="document.getElementById('notification-panel')?.classList.add('hidden')" class="md:hidden text-gray-400 hover:text-gray-700 text-lg" title="Kapat"><i class="fa-solid fa-xmark"></i></button>
                                     </div>
                                 </div>
                                 <div id="notification-list" class="max-h-80 overflow-y-auto custom-scrollbar"></div>
@@ -262,6 +300,7 @@
                     </button>
                 </div>
             </div>
+            <div id="mobile-filter-summary" class="mobile-filter-summary hidden md:hidden flex-wrap gap-2 mb-4"></div>
             <div class="hidden md:block bg-white border border-gray-100 rounded-2xl p-4 mb-6 shadow-sm">
                 <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
                     <button onclick="sortProducts('cheap')" class="whitespace-nowrap px-4 py-2 text-xs font-bold hover:bg-orange-50 rounded-lg transition text-gray-600">En Düşük</button>
@@ -381,6 +420,18 @@
                         KVKK aydınlatma metnini ve kullanıcı sorumluluklarını okudum, anladım ve kabul ediyorum.
                     </label>
                 </div>
+                <div class="bg-green-50 p-4 rounded-xl border border-green-100 text-[10px] text-green-800 max-h-32 overflow-y-auto custom-scrollbar mb-2 space-y-2">
+                    <p class="font-bold text-green-900">SATIŞ VE ÖDEME ŞARTLARI</p>
+                    {% for paragraph in site_settings.sales_terms_text.split('\n') if paragraph.strip() %}
+                        <p>{{ paragraph }}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex items-start gap-2 px-1">
+                    <input type="checkbox" id="reg-sales-terms" class="mt-1 w-4 h-4 accent-green-600 cursor-pointer">
+                    <label for="reg-sales-terms" class="text-[11px] text-gray-600 leading-tight cursor-pointer">
+                        Satış, ödeme, kargo, iade ve itiraz şartlarını okudum ve kabul ediyorum.
+                    </label>
+                </div>
 
                 <button onclick="submitRegister()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-black hover:bg-orange-700 transition">KAYIT OL</button>
                 <button onclick="toggleModal('modal-register')" class="w-full text-gray-400 text-sm font-bold">Vazgeç</button>
@@ -391,27 +442,38 @@
     <div id="modal-ilan" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[100] p-4">
         <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-4 text-orange-600">Yeni İlan Ver</h2>
+            <div class="listing-step-bar hidden grid-cols-4 gap-2 mb-4">
+                <button type="button" onclick="scrollToListingStep('listing-step-images')" class="bg-orange-50 text-orange-700 rounded-xl px-2 py-2 text-[10px] font-black">Foto</button>
+                <button type="button" onclick="scrollToListingStep('listing-step-info')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Bilgi</button>
+                <button type="button" onclick="scrollToListingStep('listing-step-price')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Fiyat</button>
+                <button type="button" onclick="scrollToListingStep('listing-step-preview')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Onay</button>
+            </div>
             <div class="space-y-4">
-                <select id="new-cat" onchange="updateSubCategories()" class="w-full border p-3 rounded-lg text-sm outline-none"></select>
-                <select id="new-brand" onchange="showBrandLimit()" class="w-full border p-3 rounded-lg text-sm outline-none"></select>
-                <input type="text" id="new-title" required class="w-full border p-3 rounded-lg outline-none" placeholder="Ürün Başlığı">
+                <div id="listing-step-info" class="listing-step-block space-y-4">
+                    <p class="md:hidden text-[10px] font-black text-gray-400 uppercase">Ürün bilgileri</p>
+                    <select id="new-cat" onchange="updateSubCategories()" class="w-full border p-3 rounded-lg text-sm outline-none"></select>
+                    <select id="new-brand" onchange="showBrandLimit()" class="w-full border p-3 rounded-lg text-sm outline-none"></select>
+                    <input type="text" id="new-title" required class="w-full border p-3 rounded-lg outline-none" placeholder="Ürün Başlığı">
                 <textarea
   id="new-desc"
   class="w-full border p-3 rounded-lg h-20"
   style="resize: none; box-sizing: border-box; display: block;"
   maxlength="1000"
   placeholder="Açıklama:Max 1000 karakter"></textarea>
-                <select id="new-condition" required class="w-full border p-3 rounded-lg text-sm outline-none">
-                    <option value="">Ürünün Durumu</option>
-                    <option value="Yeni">Yeni</option>
-                    <option value="Az kullanılmış">Az kullanılmış</option>
-                    <option value="İyi durumda">İyi durumda</option>
-                    <option value="Yıpranmış">Yıpranmış</option>
-                </select>
-                <label class="flex items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <input type="checkbox" id="exchange-open" class="w-5 h-5 accent-orange-600">
-                    <span class="text-sm font-bold text-gray-700">Takasa açık</span>
-                </label>
+                    <select id="new-condition" required class="w-full border p-3 rounded-lg text-sm outline-none">
+                        <option value="">Ürünün Durumu</option>
+                        <option value="Yeni">Yeni</option>
+                        <option value="Az kullanılmış">Az kullanılmış</option>
+                        <option value="İyi durumda">İyi durumda</option>
+                        <option value="Yıpranmış">Yıpranmış</option>
+                    </select>
+                    <label class="flex items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <input type="checkbox" id="exchange-open" class="w-5 h-5 accent-orange-600">
+                        <span class="text-sm font-bold text-gray-700">Takasa açık</span>
+                    </label>
+                </div>
+                <div id="listing-step-price" class="listing-step-block space-y-4">
+                    <p class="md:hidden text-[10px] font-black text-gray-400 uppercase">Fiyat ve süre</p>
                 <div class="flex items-center gap-2 bg-orange-50 p-3 rounded-lg">
                     <input type="checkbox" id="start-from-one" onchange="handleOneLiraOption(this)" class="w-5 h-5 accent-orange-600">
                     <span class="text-sm font-bold text-orange-800">1 TL'den Başlat</span>
@@ -424,7 +486,40 @@
                     <option value="90">3 Ay</option>
                     <option value="180">6 Ay</option>
                 </select>
-                <div class="space-y-2">
+                <div class="rounded-xl border border-green-100 bg-green-50 p-3">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" id="secure-purchase" onchange="toggleSecureShippingOptions()" class="w-5 h-5 accent-green-600">
+                        <span class="text-sm font-black text-green-800">Güvenli alışveriş</span>
+                    </label>
+                    <div id="secure-shipping-options" class="hidden mt-3 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-green-100 px-3 py-2 text-xs font-black text-green-900">
+                                <input type="radio" name="new-shipping-payer" value="buyer" onchange="toggleShippingDesiSelect()" class="accent-green-600">
+                                Kargoyu alıcı ödesin
+                            </label>
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-green-100 px-3 py-2 text-xs font-black text-green-900">
+                                <input type="radio" name="new-shipping-payer" value="seller" onchange="toggleShippingDesiSelect()" class="accent-green-600">
+                                Kargoyu satıcı ödesin
+                            </label>
+                        </div>
+                        <div id="new-shipping-desi-wrap" class="hidden">
+                            <select id="new-shipping-desi" class="w-full border border-green-100 p-3 rounded-lg text-sm outline-none bg-white">
+                                <option value="">Kargo desisi seç</option>
+                                <option value="1">1 desi</option>
+                                <option value="2">2 desi</option>
+                                <option value="3">3 desi</option>
+                                <option value="4">4 desi</option>
+                                <option value="5">5 desi</option>
+                                <option value="10">10 desi</option>
+                                <option value="15">15 desi</option>
+                                <option value="20">20 desi</option>
+                                <option value="30">30 desi</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <div id="listing-step-images" class="listing-step-block space-y-2">
                     <p class="text-xs font-bold text-gray-500 uppercase">Resimler (En fazla 5 adet)</p>
                     <div class="grid grid-cols-5 gap-2">
                         {% for index in range(1, 6) %}
@@ -438,9 +533,12 @@
                     </div>
                     <div id="image-preview-list" class="hidden"></div>
                 </div>
-                <button onclick="showListingPreview()" class="w-full bg-gray-100 hover:bg-orange-50 text-gray-700 py-3 rounded-lg font-bold transition"><i class="fa-solid fa-eye mr-2"></i>Önizle</button>
-                <button onclick="addListing()" class="w-full bg-orange-600 text-white py-3 rounded-lg font-bold">Yayınla</button>
-                <button onclick="toggleModal('modal-ilan')" class="w-full text-gray-500 font-medium">Vazgeç</button>
+                <div id="listing-step-preview" class="listing-step-block space-y-3">
+                    <p class="md:hidden text-[10px] font-black text-gray-400 uppercase">Önizleme ve yayın</p>
+                    <button onclick="showListingPreview()" class="w-full bg-gray-100 hover:bg-orange-50 text-gray-700 py-3 rounded-lg font-bold transition"><i class="fa-solid fa-eye mr-2"></i>Önizle</button>
+                    <button onclick="addListing()" class="w-full bg-orange-600 text-white py-3 rounded-lg font-bold">Yayınla</button>
+                    <button onclick="toggleModal('modal-ilan')" class="w-full text-gray-500 font-medium">Vazgeç</button>
+                </div>
             </div>
         </div>
     </div>
@@ -538,7 +636,7 @@
     </div>
 
     <script type="application/json" id="app-state">
-        {{ {"currentUserId": current_user.id if current_user.is_authenticated else none, "isAuthenticated": current_user.is_authenticated, "siteSettings": site_settings, "shippingCarriers": shipping_carriers, "shippingTrackingUrls": shipping_tracking_urls} | tojson }}
+        {{ {"currentUserId": current_user.id if current_user.is_authenticated else none, "isAuthenticated": current_user.is_authenticated, "siteSettings": site_settings, "paytrConfigured": paytr_configured, "shippingCarriers": shipping_carriers, "shippingTrackingUrls": shipping_tracking_urls} | tojson }}
     </script>
     <script type="application/json" id="category-data">{{ category_data | tojson }}</script>
 
@@ -846,7 +944,7 @@
         const serverCategoryData = JSON.parse(document.getElementById('category-data').textContent || '{}');
         const categoryData = Object.keys(serverCategoryData).length ? serverCategoryData : fallbackCategoryData;
         const appState = JSON.parse(document.getElementById('app-state').textContent);
-        const siteSettings = appState.siteSettings || { min_bid: 5, bid_step: 5, default_duration_days: 7, max_images: 5, featured_price: 5 };
+        const siteSettings = appState.siteSettings || { min_bid: 5, bid_step: 5, default_duration_days: 7, max_images: 5, featured_price: 5, secure_shipping_rates: {}, secure_shipping_carrier: 'Yurtiçi Kargo' };
         const shippingCarriers = Array.isArray(appState.shippingCarriers) ? appState.shippingCarriers : ['PTT Kargo', 'Yurtiçi Kargo', 'Aras Kargo', 'MNG Kargo', 'Sürat Kargo', 'Diğer'];
         const shippingTrackingUrls = appState.shippingTrackingUrls || {};
         let productsData = [];
@@ -893,6 +991,7 @@
             }
             setInterval(() => refreshProducts(true), 10000);
             setInterval(pollActiveChats, 2500);
+            setInterval(pollActivePayment, 3000);
             window.addEventListener('resize', () => {
                 const panel = document.getElementById('notification-panel');
                 if (panel && !panel.classList.contains('hidden')) positionNotificationPanel();
@@ -992,6 +1091,7 @@
 
         function renderCurrentView() {
             let visibleProducts = [...productsData];
+            const activeHomeStatuses = new Set(['active', 'pending_admin_approval', 'pending_seller_approval', 'pending_bidder_action', 'seller_info_confirmation']);
             if (currentViewMode.type === 'search') {
                 visibleProducts = visibleProducts.filter(p => productMatchesSearch(p, currentViewMode.value));
             } else if (currentViewMode.type === 'category') {
@@ -1012,6 +1112,7 @@
                 visibleProducts = visibleProducts.sort((a,b)=>b.createdAt-a.createdAt).slice(0, 20);
             }
 
+            visibleProducts = visibleProducts.filter(p => activeHomeStatuses.has(p.status));
             visibleProducts = visibleProducts.filter(productMatchesAdvancedFilters);
 
             if (currentSortType === 'cheap') visibleProducts.sort((a,b)=>a.currentBid-b.currentBid);
@@ -1020,8 +1121,44 @@
             else if (currentSortType === 'ending') visibleProducts.sort((a,b)=>a.endTime - b.endTime);
 
             currentViewData = visibleProducts;
+            updateMobileFilterSummary();
             renderList(currentViewData);
             renderSearchSuggestions();
+        }
+
+        function getSortLabel(sortType) {
+            return {
+                cheap: 'En düşük',
+                expensive: 'En yüksek',
+                newest: 'En yeni',
+                ending: 'Süresi azalan'
+            }[sortType] || '';
+        }
+
+        function getCurrentViewLabel() {
+            if (currentViewMode.type === 'search') return `Arama: ${currentViewMode.value}`;
+            if (currentViewMode.type === 'category' || currentViewMode.type === 'brand') return currentViewMode.value;
+            if (currentViewMode.type === 'mine') return 'Ürünlerim';
+            if (currentViewMode.type === 'my_bids') return 'Tekliflerim';
+            if (currentViewMode.type === 'favorites') return 'Favoriler';
+            if (currentViewMode.type === 'ending_soon') return 'Süresi azalan';
+            if (currentViewMode.type === 'most_bid') return 'Çok teklif alan';
+            if (currentViewMode.type === 'new_arrivals') return 'Yeni gelenler';
+            return '';
+        }
+
+        function updateMobileFilterSummary() {
+            const box = document.getElementById('mobile-filter-summary');
+            if (!box) return;
+            const chips = [];
+            const viewLabel = getCurrentViewLabel();
+            if (viewLabel) chips.push(viewLabel);
+            if (currentSortType) chips.push(getSortLabel(currentSortType));
+            if (advancedFilters.minPrice !== null) chips.push(`Min ${Number(advancedFilters.minPrice).toLocaleString()} TL`);
+            if (advancedFilters.maxPrice !== null) chips.push(`Max ${Number(advancedFilters.maxPrice).toLocaleString()} TL`);
+            if (advancedFilters.location) chips.push(advancedFilters.location);
+            box.innerHTML = chips.map(chip => `<span class="bg-orange-50 text-orange-700 border border-orange-100 rounded-full px-3 py-1 text-[10px] font-black">${escapeHtml(chip)}</span>`).join('');
+            box.classList.toggle('hidden', chips.length === 0);
         }
 
         function escapeHtml(value) {
@@ -1109,6 +1246,7 @@
             });
 
             productsData
+                .filter(product => product.status === 'active')
                 .filter(product => productMatchesSearch(product, query))
                 .slice(0, 6)
                 .forEach(product => addSuggestion(product.title, 'product', product.id, 'fa-box-open', `${product.currentBid.toLocaleString()} TL`));
@@ -1312,6 +1450,14 @@
             renderCurrentView();
         }
 
+        function scrollToListingStep(stepId) {
+            document.getElementById(stepId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function scrollProfileSection(sectionId) {
+            document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function renderParticipants(product, compact = true) {
             const participants = product.participants || [];
             if (participants.length === 0) {
@@ -1366,6 +1512,11 @@
                 showScreenNotice("Lütfen aydınlatma metnini onaylayınız.", "error");
                 return;
             }
+            const salesTermsChecked = document.getElementById('reg-sales-terms').checked;
+            if (!salesTermsChecked) {
+                showScreenNotice("Lütfen satış ve ödeme şartlarını onaylayınız.", "error");
+                return;
+            }
 
             const password = document.getElementById('reg-password').value;
             const passwordConfirm = document.getElementById('reg-password-confirm').value;
@@ -1389,7 +1540,8 @@
                 district: document.getElementById('reg-district').value,
                 neighborhood: document.getElementById('reg-neighborhood').value,
                 addressDetail: document.getElementById('reg-address-detail').value,
-                kvkkAccepted: consentChecked
+                kvkkAccepted: consentChecked,
+                salesTermsAccepted: salesTermsChecked
             };
             const response = await fetch('/api/register', {
                 method: 'POST',
@@ -1484,6 +1636,7 @@
                         <div class="p-4">
                             <h3 class="font-bold text-sm truncate text-gray-700">${p.title}</h3>
                             ${trustLabel ? `<p class="mt-1 inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-shield-halved"></i> Güven: ${escapeHtml(trustLabel)}</p>` : ''}
+                            ${p.securePurchase ? `<p class="mt-1 inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-lock"></i> Güvenli ödeme</p><p class="mt-1 inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-truck-fast"></i> Anlaşmalı kargo</p>` : ''}
                             <div class="flex items-center justify-between mt-2 text-[10px] font-bold text-gray-400">
                                 <span><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.location || 'Konum yok')}</span>
                                 <span><i class="fa-solid fa-eye mr-1"></i>${p.viewCount || 0}</span>
@@ -1675,17 +1828,58 @@
             } else if (p.status === 'pending_seller_approval' && currentUserId === p.owner_id) {
                 actionArea = `<div class="bg-orange-50 p-4 rounded-xl border border-orange-200"><p class="text-sm font-bold text-orange-800 mb-3">Teklif geldi! Onaylıyor musunuz?</p><div class="flex gap-2"><button onclick="sellerRespond(${p.id}, 'approve')" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold">Onayla</button><button onclick="sellerRespond(${p.id}, 'reject')" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold">Reddet</button></div></div>`;
             } else if (p.status === 'pending_bidder_action' && currentUserId === p.matched_user_id) {
-                actionArea = `<div class="bg-blue-50 p-4 rounded-xl border border-blue-200"><p class="text-sm font-bold text-blue-800 mb-3">Satıcı sizi seçti! İhaleye devam ediyor musunuz?</p><div class="flex gap-2"><button onclick="bidderRespond(${p.id}, 'continue')" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold">İhaleye Devam Et</button><button onclick="bidderRespond(${p.id}, 'withdraw')" class="flex-1 bg-gray-600 text-white py-2 rounded-lg font-bold">İhaleden Vazgeç</button></div></div>`;
+                actionArea = `<div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                    <p class="text-sm font-black text-blue-900 mb-1">İhaleyi kazandınız.</p>
+                    <p class="text-xs font-bold text-blue-800 mb-3">Devam etmek istiyor musunuz?</p>
+                    ${p.securePurchase ? `<div class="mb-3 rounded-xl bg-white border border-blue-100 p-3 text-[10px] font-black text-blue-900 space-y-1">
+                        <p>Ürün tutarı: ${formatTl(p.securePaymentProductAmount)}</p>
+                        <p>Kargo: ${escapeHtml(p.secureShippingCarrier || 'Anlaşmalı kargo')} · ${formatTl(p.secureShippingFee)} (${escapeHtml(p.shippingPayerLabel || '')})</p>
+                        <p>İşlem ücreti: ${formatTl(p.securePaymentServiceFee)}</p>
+                        <p>PayTR ile tahsil edilecek tutar: ${formatTl(p.securePaymentBuyerTotal)}</p>
+                    </div>` : ''}
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <button onclick="showBidderAddressConfirm(${p.id})" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold">Onayla</button>
+                        <button onclick="bidderRespond(${p.id}, 'withdraw')" class="flex-1 bg-gray-600 text-white py-2 rounded-lg font-bold">Reddet</button>
+                    </div>
+                    <div id="bidder-address-confirm-${p.id}" class="hidden mt-3 bg-white border border-blue-100 rounded-xl p-3">
+                        <p class="text-xs font-black text-blue-900">Adres bilgileriniz satıcıya iletilecektir. Onaylıyor musunuz?</p>
+                        <p class="text-[10px] font-bold text-blue-700 mt-1">Onay verirseniz ad, telefon, e-posta, il/ilçe/mahalle ve detay adresiniz satıcı tarafından görülebilir.</p>
+                        <div class="mt-3 flex gap-2">
+                            <button onclick="bidderRespond(${p.id}, 'continue')" class="flex-1 bg-green-600 text-white py-2 rounded-lg text-xs font-black">Evet, paylaş</button>
+                            <button onclick="hideBidderAddressConfirm(${p.id})" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-black">Vazgeç</button>
+                        </div>
+                    </div>
+                </div>`;
             } else if (p.status === 'seller_info_confirmation' && currentUserId === p.owner_id) {
-                actionArea = `<div class="bg-orange-50 p-4 rounded-xl border border-orange-200"><p class="text-sm font-bold text-orange-800 mb-3">Bilgileriniz paylaşılacaktır, onaylıyor musunuz?</p><button onclick="sellerRespond(${p.id}, 'approve')" class="w-full bg-orange-600 text-white py-2 rounded-lg font-bold">Onayla ve Paylaş</button></div>`;
+                actionArea = `<div class="bg-orange-50 p-4 rounded-xl border border-orange-200">
+                    <p class="text-sm font-black text-orange-900 mb-1">Alıcı devam etmeyi onayladı.</p>
+                    <p class="text-xs font-bold text-orange-800 mb-3">Alıcının paylaştığı adres bilgileri aşağıdadır.</p>
+                    ${renderBuyerInfoCard(p.buyer_info)}
+                    ${p.securePurchase ? `<div class="mt-3 rounded-xl bg-white border border-orange-100 p-3 text-[10px] font-black text-orange-900 space-y-1">
+                        <p>Kargo: ${escapeHtml(p.secureShippingCarrier || 'Anlaşmalı kargo')} · ${formatTl(p.secureShippingFee)} (${escapeHtml(p.shippingPayerLabel || '')})</p>
+                        <p>Komisyon: ${formatTl(p.securePaymentCommissionFee)} · Satıcıya aktarılacak: ${formatTl(p.securePaymentSellerPayoutAmount)}</p>
+                        ${p.shippingPayer === 'seller' ? `<p>Satıcıdan alınacak/kesilecek kargo tutarı: ${formatTl(p.securePaymentSellerShippingDebt)}</p>` : `<p>Kargo tutarı alıcıdan PayTR ödemesinde tahsil edilir.</p>`}
+                    </div>` : ''}
+                    <button onclick="sellerRespond(${p.id}, 'approve')" class="mt-3 w-full bg-orange-600 text-white py-2 rounded-lg font-bold">Satışı Tamamla</button>
+                </div>`;
             } else if (p.status === 'completed' && p.seller_info) {
+                const buyerContactOnly = currentUserId === p.matched_user_id && currentUserId !== p.owner_id;
+                const payment = p.payment_intent || null;
                 actionArea = `<div class="bg-green-50 p-4 rounded-xl border border-green-200 text-xs font-bold text-green-700 space-y-1">
                     <p class="text-sm font-black uppercase mb-1">Eşleşme Tamamlandı!</p>
+                    ${payment ? `<div class="mb-3 rounded-xl bg-white border border-green-100 p-3 text-[10px] font-black text-green-800 space-y-1">
+                        <p>Ödeme durumu: ${escapeHtml(payment.statusLabel)}</p>
+                        <p>Alıcı toplamı: ${formatTl(payment.buyerTotal)} · Satıcı payı: ${formatTl(payment.sellerPayoutAmount)}</p>
+                        <p>Platform/kargo kalemleri: ${formatTl(payment.platformTotalFee)} / ${formatTl(payment.shippingFee)}</p>
+                        ${currentUserId === p.matched_user_id && ['pending', 'cancelled'].includes(payment.status) ? `<button onclick="startPayment(${p.id})" class="mt-2 w-full bg-green-700 hover:bg-green-800 text-white py-2 rounded-lg text-[10px] font-black"><i class="fa-solid fa-credit-card mr-2"></i>PayTR ile Öde</button>` : ''}
+                        ${currentUserId === p.matched_user_id && !appState.paytrConfigured && ['pending', 'cancelled'].includes(payment.status) ? `<button onclick="completeMockPayment(${p.id})" class="mt-2 w-full bg-gray-900 hover:bg-black text-white py-2 rounded-lg text-[10px] font-black"><i class="fa-solid fa-vial mr-2"></i>Test Ödemeyi Tamamla</button>` : ''}
+                    </div>` : ''}
                     <p>Tel: ${escapeHtml(p.seller_info.phone || '-')}</p>
                     <p>E-Posta: ${escapeHtml(p.seller_info.email || '-')}</p>
-                    <p>Konum: ${escapeHtml(p.seller_info.location || '-')}</p>
-                    ${p.seller_info.addressDetail ? `<p>Detay adres: ${escapeHtml(p.seller_info.addressDetail)}</p>` : '<p class="text-[10px] text-green-600">Detay adres satıcı tercihi nedeniyle sadece admin tarafından görülür.</p>'}
-                    ${p.seller_info.availability ? `<p>Uygunluk: ${escapeHtml(p.seller_info.availability)}</p>` : ''}
+                    ${!buyerContactOnly && p.seller_info.location ? `<p>Konum: ${escapeHtml(p.seller_info.location)}</p>` : ''}
+                    ${!buyerContactOnly ? (p.seller_info.addressDetail ? `<p>Detay adres: ${escapeHtml(p.seller_info.addressDetail)}</p>` : '<p class="text-[10px] text-green-600">Detay adres satıcı tercihi nedeniyle sadece admin tarafından görülür.</p>') : ''}
+                    ${!buyerContactOnly && p.seller_info.availability ? `<p>Uygunluk: ${escapeHtml(p.seller_info.availability)}</p>` : ''}
+                    ${currentUserId === p.owner_id && p.buyer_info ? `<div class="mt-3 pt-3 border-t border-green-100">${renderBuyerInfoCard(p.buyer_info, 'Alıcı bilgileri')}</div>` : ''}
                 </div>`;
             } else { actionArea = `<p class="text-center italic text-gray-400">Durum: ${p.status.replace(/_/g, ' ')}</p>`; }
 
@@ -1730,6 +1924,27 @@
                             <input id="edit-product-exchange-${p.id}" type="checkbox" ${p.exchangeOpen ? 'checked' : ''} class="h-4 w-4 accent-orange-600">
                             Takasa açık
                         </label>
+                        <div class="mb-2 rounded-lg bg-white/80 border border-indigo-100 p-3">
+                            <label class="flex items-center gap-2 text-xs font-black text-indigo-900">
+                                <input id="edit-product-secure-${p.id}" type="checkbox" ${p.securePurchase ? 'checked' : ''} onchange="toggleEditSecureShippingOptions(${p.id})" class="h-4 w-4 accent-green-600">
+                                Güvenli alışveriş
+                            </label>
+                            <div id="edit-product-secure-options-${p.id}" class="${p.securePurchase ? '' : 'hidden'} mt-3 space-y-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <label class="flex items-center gap-2 rounded-lg bg-white border border-indigo-100 px-3 py-2 text-[11px] font-black text-indigo-900">
+                                        <input type="radio" name="edit-shipping-payer-${p.id}" value="buyer" ${p.shippingPayer !== 'seller' ? 'checked' : ''} class="accent-green-600">
+                                        Alıcı öder
+                                    </label>
+                                    <label class="flex items-center gap-2 rounded-lg bg-white border border-indigo-100 px-3 py-2 text-[11px] font-black text-indigo-900">
+                                        <input type="radio" name="edit-shipping-payer-${p.id}" value="seller" ${p.shippingPayer === 'seller' ? 'checked' : ''} class="accent-green-600">
+                                        Satıcı öder
+                                    </label>
+                                </div>
+                                <select id="edit-product-shipping-desi-${p.id}" class="w-full border border-indigo-100 rounded-lg p-2 text-xs bg-white">
+                                    ${['', '1', '2', '3', '4', '5', '10', '15', '20', '30'].map(value => `<option value="${value}" ${String(p.shippingDesi || '') === value ? 'selected' : ''}>${value ? `${value} desi` : 'Kargo desisi seç'}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
                         <div class="mb-2 rounded-xl bg-white/80 border border-indigo-100 p-3">
                             <div class="flex items-center justify-between gap-2 mb-2">
                                 <p class="text-[10px] font-black text-indigo-900 uppercase">Fotoğraflar</p>
@@ -1781,7 +1996,8 @@
                         </select>
                         <input id="tracking-code-${p.id}" value="${escapeHtml(saleProgress.tracking_code || '')}" class="border border-green-100 rounded-lg px-3 py-2 text-xs font-bold bg-white outline-none" placeholder="Takip kodu">
                     </div>
-                    <button onclick="saveShippingInfo(${p.id})" class="mt-2 w-full bg-green-700 text-white py-2 rounded-xl text-xs font-black">Kargo Bilgisini Kaydet</button>` : `
+                    <button onclick="saveShippingInfo(${p.id})" class="mt-2 w-full bg-green-700 text-white py-2 rounded-xl text-xs font-black">Kargo Bilgisini Kaydet</button>
+                    <button onclick="prepareShippingLabel(${p.id})" class="mt-2 w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 py-2 rounded-xl text-xs font-black"><i class="fa-solid fa-barcode mr-2"></i>Kargo etiketi hazırla</button>` : `
                     <div class="mt-2 bg-white/80 border border-green-100 rounded-xl p-3 text-[10px] font-bold text-green-800 space-y-1">
                         <p>Kargo durumu: ${escapeHtml(getShippingStatusLabel(saleProgress.shipping_status))}</p>
                         <p>Firma: ${escapeHtml(saleProgress.shipping_carrier || 'Henüz girilmedi')}</p>
@@ -1824,11 +2040,16 @@
                         <span class="w-9 h-9 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-shield-halved"></i></span>
                         <div>
                             <p class="text-sm font-black text-yellow-900">Güvenli alışveriş notu</p>
-                            <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-bold text-yellow-800">
-                                <span class="bg-white/70 rounded-xl px-3 py-2"><i class="fa-solid fa-eye mr-1"></i>Ürünü görmeden ödeme yapma.</span>
+                            <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-bold text-yellow-800">
                                 <span class="bg-white/70 rounded-xl px-3 py-2"><i class="fa-solid fa-comments mr-1"></i>Anlaşmayı sohbet üzerinden netleştir.</span>
                                 <span class="bg-white/70 rounded-xl px-3 py-2"><i class="fa-solid fa-flag mr-1"></i>Şüpheli durumda hemen şikayet et.</span>
                             </div>
+                            ${p.securePurchase ? `<div class="mt-3 rounded-xl bg-white/80 border border-green-100 px-3 py-2 text-[10px] font-black text-green-800">
+                                <p><i class="fa-solid fa-truck-fast mr-1"></i>${escapeHtml(p.secureShippingCarrier || 'Anlaşmalı kargo')} · ${escapeHtml(p.shippingPayerLabel || getShippingPayerLabel(p.shippingPayer))}${p.shippingDesi ? ` · ${escapeHtml(String(p.shippingDesi))} desi` : ''}</p>
+                                <p class="mt-1">Kargo ücreti: ${formatTl(p.secureShippingFee)}</p>
+                                <p class="mt-1">İşlem ücreti: ${formatTl(p.securePaymentServiceFee)} · Komisyon: ${formatTl(p.securePaymentCommissionFee)}</p>
+                                <p class="mt-1">${escapeHtml(p.securePaymentChargeRule || '')}</p>
+                            </div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -1852,6 +2073,8 @@
                             <span class="${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} px-3 py-1 rounded-full text-[10px] font-black uppercase">${p.statusLabel || p.status}</span>
                             ${p.condition ? `<span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(p.condition)}</span>` : ''}
                             ${p.exchangeOpen ? '<span class="bg-orange-50 text-orange-700 border border-orange-100 px-3 py-1 rounded-full text-[10px] font-black lowercase">Takasa açık</span>' : ''}
+                            ${p.securePurchase ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-lock mr-1"></i>Güvenli alışveriş</span>` : ''}
+                            ${p.securePurchase ? `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(p.secureShippingCarrier || 'Anlaşmalı kargo')} · ${escapeHtml(p.shippingPayerLabel || getShippingPayerLabel(p.shippingPayer))}${p.shippingDesi ? ` · ${escapeHtml(String(p.shippingDesi))} desi` : ''}${p.secureShippingFee ? ` · ${formatTl(p.secureShippingFee)}` : ''}</span>` : ''}
                             ${p.isFeatured ? '<span class="bg-indigo-900 text-white px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-star mr-1"></i>Öne çıkan</span>' : ''}
                             ${p.owner_trust ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-shield-halved mr-1"></i>Güven: ${escapeHtml(p.owner_trust.label)}</span>` : ''}
                             <span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.location || 'Konum yok')}</span>
@@ -1977,6 +2200,64 @@
             const r = await fetch('/api/bidder_respond', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: id, action: act }) });
             const res = await r.json();
             if(res.success) { if(res.banned) window.location.reload(); else { await fetchProducts(); showDetails(id); } }
+        }
+
+        function updateProductPaymentState(productId, paymentIntent, saleProgress = null, productStatus = null) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+            if (paymentIntent) product.payment_intent = paymentIntent;
+            if (saleProgress) product.sale_progress = saleProgress;
+            if (productStatus) product.status = productStatus;
+        }
+
+        async function startPayment(productId) {
+            const response = await fetch(`/api/payments/create/${productId}`, { method: 'POST' });
+            const result = await response.json();
+            if (!result.success) {
+                showScreenNotice(result.message || 'Ödeme başlatılamadı', 'error');
+                return;
+            }
+            updateProductPaymentState(productId, result.paymentIntent);
+            if (result.paymentUrl) {
+                window.open(result.paymentUrl, '_blank', 'noopener,noreferrer');
+                showScreenNotice('PayTR ödeme ekranı açıldı');
+            } else if (result.mockMode) {
+                showScreenNotice(result.message || 'Test ödeme modu açık');
+            } else if (result.alreadyPaid) {
+                showScreenNotice('Bu ödeme zaten alınmış');
+            }
+            await showDetails(productId);
+        }
+
+        async function completeMockPayment(productId) {
+            const response = await fetch(`/api/payments/mock_complete/${productId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                updateProductPaymentState(productId, result.paymentIntent);
+                await loadNotifications();
+                await showDetails(productId);
+                showScreenNotice('Test ödeme alındı, para güvenli havuza geçti');
+            } else {
+                showScreenNotice(result.message || 'Test ödeme tamamlanamadı', 'error');
+            }
+        }
+
+        async function pollActivePayment() {
+            if (!appState.isAuthenticated || !activeDetailId) return;
+            if (document.getElementById('detail-page')?.classList.contains('hidden')) return;
+            const product = productsData.find(p => p.id === activeDetailId);
+            if (!product || product.status !== 'completed' || !product.payment_intent) return;
+            const response = await fetch(`/api/payments/status/${activeDetailId}`);
+            if (!response.ok) return;
+            const result = await response.json();
+            if (!result.success || !result.paymentIntent) return;
+            const oldStatus = product.payment_intent && product.payment_intent.status;
+            updateProductPaymentState(activeDetailId, result.paymentIntent, result.saleProgress, result.productStatus);
+            if (oldStatus && oldStatus !== result.paymentIntent.status) {
+                await loadNotifications();
+                await showDetails(activeDetailId);
+                showScreenNotice(`Ödeme durumu güncellendi: ${result.paymentIntent.statusLabel}`);
+            }
         }
 
         function showBidError(message) {
@@ -2120,6 +2401,17 @@
             }
         }
 
+        async function prepareShippingLabel(productId) {
+            const response = await fetch(`/api/shipping_label/${productId}`);
+            const result = await response.json();
+            if (!result.success) {
+                showScreenNotice(result.message || 'Kargo etiketi hazırlanamadı', 'error');
+                return;
+            }
+            const label = result.label || {};
+            showScreenNotice(`${label.carrier || 'Kargo'} etiketi hazırlığı açıldı. API bağlanınca barkod üretilecek.`);
+        }
+
         function copyTrackingCode(code) {
             copyText(code, 'Takip kodu kopyalandı');
         }
@@ -2148,6 +2440,33 @@
             return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${extraClass || 'inline-flex items-center justify-center'} bg-indigo-900 hover:bg-black text-white px-3 py-2 rounded-xl text-[10px] font-black transition">
                 <i class="fa-solid fa-truck-fast mr-2"></i>Kargo Takip
             </a>`;
+        }
+
+        function renderBuyerInfoCard(info, title = 'Alıcı adres bilgileri') {
+            if (!info) {
+                return '<div class="bg-white/80 border border-orange-100 rounded-xl p-3 text-xs font-bold text-orange-700">Alıcı bilgileri henüz yüklenemedi.</div>';
+            }
+            return `<div class="bg-white/90 border border-orange-100 rounded-xl p-3 text-xs font-bold text-orange-900 space-y-1">
+                <p class="text-[10px] font-black uppercase text-orange-600">${escapeHtml(title)}</p>
+                <p>Ad Soyad: ${escapeHtml(info.name || '-')}</p>
+                <p>Telefon: ${escapeHtml(info.phone || '-')}</p>
+                <p>E-Posta: ${escapeHtml(info.email || '-')}</p>
+                <p>Konum: ${escapeHtml(info.location || '-')}</p>
+                <p>Detay adres: ${escapeHtml(info.addressDetail || '-')}</p>
+                ${info.availability ? `<p>Uygunluk: ${escapeHtml(info.availability)}</p>` : ''}
+            </div>`;
+        }
+
+        function showBidderAddressConfirm(productId) {
+            document.getElementById(`bidder-address-confirm-${productId}`)?.classList.remove('hidden');
+        }
+
+        function hideBidderAddressConfirm(productId) {
+            document.getElementById(`bidder-address-confirm-${productId}`)?.classList.add('hidden');
+        }
+
+        function showBidderOrderAddressConfirm(productId) {
+            document.getElementById(`order-bidder-address-confirm-${productId}`)?.classList.remove('hidden');
         }
 
         function toggleSaleIssueBox(productId) {
@@ -2377,10 +2696,10 @@
 
             if (window.matchMedia('(max-width: 767px)').matches) {
                 panel.style.position = 'fixed';
-                panel.style.left = '12px';
-                panel.style.right = '12px';
-                panel.style.top = '76px';
-                panel.style.bottom = '76px';
+                panel.style.left = '0';
+                panel.style.right = '0';
+                panel.style.top = '0';
+                panel.style.bottom = '0';
                 panel.style.width = 'auto';
             } else {
                 resetNotificationPanelPosition();
@@ -3075,6 +3394,13 @@
             const trust = profile.user.trust || { label: 'Yeni / düşük veri', score: 0, positive: [], warnings: [] };
             const blockedUsers = profile.blockedUsers || [];
             content.innerHTML = `
+                <div class="mobile-profile-tabs hidden grid-cols-4 gap-2 mb-4">
+                    <button onclick="scrollProfileSection('profile-overview')" class="bg-orange-50 text-orange-700 rounded-xl px-2 py-2 text-[10px] font-black">Bilgiler</button>
+                    <button onclick="scrollProfileSection('profile-trades')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Al/Sat</button>
+                    <button onclick="scrollProfileSection('profile-favorites')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Favoriler</button>
+                    <button onclick="scrollProfileSection('profile-settings')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Ayarlar</button>
+                </div>
+                <div id="profile-overview">
                 <div class="grid grid-cols-1 md:grid-cols-[minmax(280px,1fr)_2fr] gap-4 mb-6">
                     <div class="bg-orange-50 border border-orange-100 rounded-2xl p-4 min-w-0 overflow-hidden">
                         <div class="flex items-start gap-3 min-w-0">
@@ -3115,6 +3441,61 @@
                 <div>
                     ${renderTrustDetailsPanel(trust, profile.user.name)}
                 </div>
+                </div>
+                <div class="mt-6 bg-green-50 border border-green-100 rounded-2xl p-4">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <p class="text-sm font-black text-green-900">Cüzdan / Bakiye</p>
+                            <p class="text-[11px] font-bold text-green-700 mt-1">Satış kazancı, bekleyen ödeme ve işlem dökümleri.</p>
+                        </div>
+                        <i class="fa-solid fa-wallet text-green-600 text-xl"></i>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                        ${[
+                            ['Bekleyen', profile.wallet?.pendingPayout || 0],
+                            ['Aktarılan', profile.wallet?.paidOut || 0],
+                            ['Satış', profile.wallet?.salesGross || 0],
+                            ['Alış', profile.wallet?.purchaseTotal || 0]
+                        ].map(([label, value]) => `<div class="bg-white rounded-xl border border-green-100 p-3"><p class="text-lg font-black text-green-700">${formatTl(value)}</p><p class="text-[9px] font-black text-green-800 uppercase">${label}</p></div>`).join('')}
+                    </div>
+                    <button onclick="requestPayout()" class="mb-3 w-full bg-green-700 hover:bg-green-800 text-white px-4 py-3 rounded-xl text-xs font-black transition">
+                        <i class="fa-solid fa-money-bill-transfer mr-2"></i>Aktarılabilir Bakiyeyi Talep Et
+                    </button>
+                    <div class="space-y-2">
+                        ${(profile.payments || []).length ? profile.payments.map(payment => `
+                            <button onclick="toggleModal('modal-profile'); showDetails(${payment.productId})" class="w-full text-left bg-white border border-green-100 rounded-xl p-3 hover:bg-green-100 transition">
+                                <span class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-black text-gray-800 line-clamp-1">${escapeHtml(payment.productTitle)}</span>
+                                    <span class="text-[9px] font-black rounded-full bg-green-50 text-green-700 px-2 py-1">${escapeHtml(payment.statusLabel)}</span>
+                                </span>
+                                <span class="block mt-1 text-[10px] font-bold text-gray-500">${payment.role === 'seller' ? `Satıcı payı: ${formatTl(payment.sellerPayoutAmount)}` : `Alıcı toplamı: ${formatTl(payment.buyerTotal)}`} · ${escapeHtml(payment.createdAt)}</span>
+                            </button>
+                        `).join('') : '<p class="text-xs text-green-700 font-bold bg-white/70 rounded-xl p-3">Henüz ödeme hareketi yok.</p>'}
+                    </div>
+                </div>
+                <div id="profile-trades" class="mt-6">
+                    <p class="text-sm font-black text-gray-700 mb-3">Aldıklarım / Sattıklarım</p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="rounded-2xl border border-green-100 bg-green-50 p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-sm font-black text-green-900">Sattıklarım</p>
+                                <span class="text-[10px] font-black text-green-700">${(profile.soldProducts || []).length} ilan</span>
+                            </div>
+                            <div class="space-y-2">
+                                ${(profile.soldProducts || []).length ? profile.soldProducts.map(item => renderProfileTradeItem(item, 'sold')).join('') : '<p class="text-xs text-green-700 font-bold bg-white/70 rounded-xl p-3">Henüz tamamlanan satışınız yok.</p>'}
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-sm font-black text-blue-900">Aldıklarım</p>
+                                <span class="text-[10px] font-black text-blue-700">${(profile.boughtProducts || []).length} ilan</span>
+                            </div>
+                            <div class="space-y-2">
+                                ${(profile.boughtProducts || []).length ? profile.boughtProducts.map(item => renderProfileTradeItem(item, 'bought')).join('') : '<p class="text-xs text-blue-700 font-bold bg-white/70 rounded-xl p-3">Henüz tamamlanan alışınız yok.</p>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="mt-6">
                     <div class="flex items-center justify-between mb-3">
                         <p class="text-sm font-black text-gray-700">Bana Gelen Yorumlar</p>
@@ -3136,7 +3517,7 @@
                         `).join('') : '<p class="text-xs text-gray-400 italic">Engellenen kullanıcı yok.</p>'}
                     </div>
                 </div>
-                <div class="mt-6">
+                <div id="profile-favorites" class="mt-6">
                     <p class="text-sm font-black text-gray-700 mb-3">Favorilerim</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         ${profile.favorites.length ? profile.favorites.map(item => `
@@ -3165,7 +3546,7 @@
                         `).join('') : '<p class="text-xs text-gray-400 italic">Kayitli arama yok.</p>'}
                     </div>
                 </div>
-                <div class="mt-6 bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                <div id="profile-settings" class="mt-6 bg-gray-50 border border-gray-100 rounded-2xl p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
                             <p class="text-sm font-black text-gray-700">Ayarlar</p>
@@ -3184,6 +3565,10 @@
                         <label class="block">
                             <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">Teslim / görüşme uygunluğu</span>
                             <input id="profile-availability" value="${escapeHtml(profile.user.availability || '')}" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500" placeholder="Örn. hafta içi 18:00 sonrası">
+                        </label>
+                        <label class="block sm:col-span-2">
+                            <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">Satıcı IBAN</span>
+                            <input id="profile-payout-iban" value="${escapeHtml(profile.user.payout_iban || '')}" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500" placeholder="TR...">
                         </label>
                     </div>
                     <button onclick="saveProfileSettings()" class="mb-4 bg-indigo-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-black transition">
@@ -3214,7 +3599,7 @@
                     <textarea id="appeal-message" class="w-full border border-indigo-100 rounded-xl p-3 text-sm h-24" placeholder="Adminin incelemesi için mesajınızı yazın"></textarea>
                     <button onclick="sendAppeal()" class="mt-2 bg-indigo-900 text-white px-4 py-2 rounded-xl text-xs font-black">Gönder</button>
                 </div>
-                <div class="mt-6 bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                <div id="profile-support" class="mt-6 bg-gray-50 border border-gray-100 rounded-2xl p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
                             <p class="text-sm font-black text-gray-700">Bize Ulaşın</p>
@@ -3243,6 +3628,30 @@
             `;
         }
 
+        function renderProfileTradeItem(item, type) {
+            const payment = item.payment || {};
+            const amount = type === 'sold' ? payment.sellerPayoutAmount : payment.buyerTotal;
+            const label = type === 'sold' ? `Alıcı: ${item.buyerName || '-'}` : `Satıcı: ${item.sellerName || '-'}`;
+            const wrapperClass = type === 'sold'
+                ? 'w-full text-left bg-white border border-green-100 rounded-xl p-3 hover:bg-green-100 transition'
+                : 'w-full text-left bg-white border border-blue-100 rounded-xl p-3 hover:bg-blue-100 transition';
+            const amountClass = type === 'sold'
+                ? 'block text-[10px] font-black text-green-700 mt-1'
+                : 'block text-[10px] font-black text-blue-700 mt-1';
+            return `
+                <button onclick="toggleModal('modal-profile'); showDetails(${item.id})" class="${wrapperClass}">
+                    <span class="flex items-start gap-3">
+                        <img src="${escapeHtml(item.img || '')}" class="h-14 w-14 rounded-xl object-cover bg-gray-100 shrink-0">
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-xs font-black text-gray-800 line-clamp-2">${escapeHtml(item.title)}</span>
+                            <span class="block text-[10px] font-bold text-gray-400 mt-1">${escapeHtml(label)} · ${escapeHtml(item.createdAt || '')}</span>
+                            <span class="${amountClass}">${formatTl(amount || item.currentBid || 0)} · ${escapeHtml(payment.statusLabel || item.statusLabel || '')}</span>
+                        </span>
+                    </span>
+                </button>
+            `;
+        }
+
         function getOrderStage(order) {
             const shipping = order.saleProgress && order.saleProgress.shipping_status;
             if (order.status === 'completed' && shipping) {
@@ -3265,21 +3674,43 @@
 
         function renderOrderProgress(order) {
             const progress = order.saleProgress || {};
+            const payment = order.paymentIntent || null;
             const items = [
                 ['contact_made', 'İletişim'],
                 ['buyer_received_confirmed', 'Alıcı teslim aldı'],
                 ['seller_payment_confirmed', 'Satıcı ödeme aldı']
             ];
+            if (order.status === 'pending_bidder_action') {
+                return `<div class="mt-3 rounded-xl bg-blue-50 border border-blue-100 p-3">
+                    <p class="text-xs font-black text-blue-900">İhaleyi kazandınız. Devam etmek istiyor musunuz?</p>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <button onclick="showBidderOrderAddressConfirm(${order.id})" class="bg-blue-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Onayla</button>
+                        <button onclick="bidderRespond(${order.id}, 'withdraw')" class="bg-gray-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Reddet</button>
+                    </div>
+                    <div id="order-bidder-address-confirm-${order.id}" class="hidden mt-2 rounded-xl bg-white border border-blue-100 p-3">
+                        <p class="text-[11px] font-black text-blue-900">Adres bilgileriniz satıcıya iletilecektir. Onaylıyor musunuz?</p>
+                        <button onclick="bidderRespond(${order.id}, 'continue')" class="mt-2 w-full bg-green-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Evet, paylaş ve devam et</button>
+                    </div>
+                </div>`;
+            }
             if (order.status !== 'completed') {
                 return '<p class="text-[11px] font-bold text-gray-400 mt-2">Kargo ve teslimat detayları yakında eklenecek.</p>';
             }
             return `<div class="mt-3 grid grid-cols-3 gap-2">${items.map(([field, label]) => `
                 <span class="${progress[field] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'} rounded-lg px-2 py-1 text-center text-[10px] font-black">${label}</span>
             `).join('')}</div>
+            ${payment ? `<div class="mt-2 rounded-xl bg-green-50 border border-green-100 p-3 text-[10px] font-bold text-green-800 space-y-1">
+                <p>Ödeme durumu: ${escapeHtml(payment.statusLabel)}</p>
+                <p>Alıcı toplamı: ${formatTl(payment.buyerTotal)} · Kargo: ${formatTl(payment.shippingFee)}</p>
+                <p>İşlem/komisyon: ${formatTl((payment.serviceFee || 0) + (payment.commissionFee || 0))}</p>
+                ${['pending', 'cancelled'].includes(payment.status) ? `<button onclick="startPayment(${order.id})" class="mt-2 w-full bg-green-700 text-white px-3 py-2 rounded-xl text-[10px] font-black">PayTR ile Öde</button>` : ''}
+                ${!appState.paytrConfigured && ['pending', 'cancelled'].includes(payment.status) ? `<button onclick="completeMockPayment(${order.id})" class="mt-2 w-full bg-gray-900 text-white px-3 py-2 rounded-xl text-[10px] font-black">Test Ödemeyi Tamamla</button>` : ''}
+            </div>` : ''}
             <div class="mt-2 rounded-xl bg-gray-50 border border-gray-100 p-3 text-[10px] font-bold text-gray-600 space-y-1">
                 <p>Kargo durumu: ${escapeHtml(getShippingStatusLabel(progress.shipping_status))}</p>
                 <p>Firma: ${escapeHtml(progress.shipping_carrier || 'Henüz girilmedi')}</p>
                 <p class="flex flex-wrap items-center gap-2">Takip kodu: <span>${escapeHtml(progress.tracking_code || 'Henüz girilmedi')}</span>${progress.tracking_code ? `<button onclick="copyTrackingCode('${escapeJs(progress.tracking_code)}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-[9px] font-black">Kopyala</button>` : ''}</p>
+                ${progress.auto_confirm_at ? `<p>Alıcı onaylamazsa otomatik onay hazırlığı: ${escapeHtml(progress.auto_confirm_at)}</p>` : ''}
                 ${renderTrackingButton(progress)}
             </div>`;
         }
@@ -3404,7 +3835,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     addressPrivacy: document.getElementById('profile-address-privacy')?.value,
-                    availability: document.getElementById('profile-availability')?.value || ''
+                    availability: document.getElementById('profile-availability')?.value || '',
+                    payoutIban: document.getElementById('profile-payout-iban')?.value || ''
                 })
             });
             const result = await response.json();
@@ -3413,6 +3845,17 @@
                 message.className = `mb-3 text-[11px] font-bold ${result.success ? 'text-green-600' : 'text-red-600'}`;
             }
             if (result.success) showScreenNotice('Profil ayarları kaydedildi');
+        }
+
+        async function requestPayout() {
+            const response = await fetch('/api/payout/request', { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                await openProfileModal(false);
+                showScreenNotice(`${formatTl(result.requestedAmount)} ödeme talebi admin onayına gönderildi`);
+            } else {
+                showScreenNotice(result.message || 'Ödeme talebi gönderilemedi', 'error');
+            }
         }
 
         function toggleReportBox(id) {
@@ -3477,6 +3920,18 @@
             if (!box) return;
             box.classList.toggle('hidden');
             if (!box.classList.contains('hidden')) initEditProductImages(productId);
+        }
+
+        function toggleEditSecureShippingOptions(productId) {
+            const enabled = document.getElementById(`edit-product-secure-${productId}`)?.checked;
+            const options = document.getElementById(`edit-product-secure-options-${productId}`);
+            options?.classList.toggle('hidden', !enabled);
+            if (!enabled) {
+                const desi = document.getElementById(`edit-product-shipping-desi-${productId}`);
+                if (desi) desi.value = '';
+                const buyerPayer = document.querySelector(`input[name="edit-shipping-payer-${productId}"][value="buyer"]`);
+                if (buyerPayer) buyerPayer.checked = true;
+            }
         }
 
         function initEditProductImages(productId) {
@@ -3550,10 +4005,19 @@
                 setEditProductImageError(productId, `En fazla ${siteSettings.max_images} fotoğraf ekleyebilirsiniz.`);
                 return;
             }
+            const securePurchase = document.getElementById(`edit-product-secure-${productId}`)?.checked || false;
+            const shippingDesi = document.getElementById(`edit-product-shipping-desi-${productId}`)?.value || '';
+            if (securePurchase && !shippingDesi) {
+                showScreenNotice("Kargo desisini seçmelisiniz", "error");
+                return;
+            }
             const payload = {
                 title: document.getElementById(`edit-product-title-${productId}`).value,
                 description: document.getElementById(`edit-product-desc-${productId}`).value,
-                exchangeOpen: document.getElementById(`edit-product-exchange-${productId}`).checked
+                exchangeOpen: document.getElementById(`edit-product-exchange-${productId}`).checked,
+                securePurchase: securePurchase,
+                shippingPayer: document.querySelector(`input[name="edit-shipping-payer-${productId}"]:checked`)?.value || 'buyer',
+                shippingDesi: shippingDesi
             };
             if (Array.isArray(images)) payload.images = images;
             const response = await fetch(`/api/edit_product/${productId}`, {
@@ -3724,6 +4188,45 @@
             const m = s.options[s.selectedIndex].dataset.max;
         }
         function handleOneLiraOption(c) { const i = document.getElementById('new-price'); if(c.checked) { i.value = 1; i.min = 1; i.max = 1; i.readOnly = true; } else { i.value = ""; i.removeAttribute('max'); i.min = 1; i.readOnly = false; } }
+        function toggleSecureShippingOptions() {
+            const enabled = document.getElementById('secure-purchase')?.checked;
+            document.getElementById('secure-shipping-options')?.classList.toggle('hidden', !enabled);
+            if (!enabled) {
+                const desi = document.getElementById('new-shipping-desi');
+                if (desi) desi.value = '';
+                document.querySelectorAll('input[name="new-shipping-payer"]').forEach(input => input.checked = false);
+            }
+            toggleShippingDesiSelect();
+        }
+        function toggleShippingDesiSelect() {
+            const shouldShow = Boolean(document.getElementById('secure-purchase')?.checked && getSelectedShippingPayer());
+            document.getElementById('new-shipping-desi-wrap')?.classList.toggle('hidden', !shouldShow);
+            if (!shouldShow) {
+                const desi = document.getElementById('new-shipping-desi');
+                if (desi) desi.value = '';
+            }
+        }
+        function getSelectedShippingPayer() {
+            return document.querySelector('input[name="new-shipping-payer"]:checked')?.value || '';
+        }
+        function getShippingPayerLabel(value) {
+            if (!value) return 'Kargo ödeme tarafı seçilmedi';
+            return value === 'seller' ? 'Kargoyu satıcı öder' : 'Kargoyu alıcı öder';
+        }
+        function getSecureShippingFeeFromSettings(desi) {
+            const parsedDesi = parseInt(desi || 0);
+            const rates = siteSettings.secure_shipping_rates || {};
+            const entries = Object.entries(rates)
+                .map(([key, value]) => [parseInt(key), parseInt(value)])
+                .filter(([key, value]) => key > 0 && value >= 0)
+                .sort((a, b) => a[0] - b[0]);
+            if (!parsedDesi || !entries.length) return 0;
+            const matched = entries.find(([key]) => parsedDesi <= key) || entries[entries.length - 1];
+            return matched ? matched[1] : 0;
+        }
+        function formatTl(value) {
+            return `${Number(value || 0).toLocaleString()} ₺`;
+        }
         function normalizeListingDuration(value) {
             const allowed = ['1', '7', '30', '90', '180'];
             const duration = String(value || siteSettings.default_duration_days || 7);
@@ -3790,6 +4293,10 @@
             const desc = document.getElementById('new-desc').value.trim();
             const condition = document.getElementById('new-condition').value;
             const exchangeOpen = document.getElementById('exchange-open').checked;
+            const securePurchase = document.getElementById('secure-purchase').checked;
+            const shippingPayer = getSelectedShippingPayer();
+            const shippingDesi = document.getElementById('new-shipping-desi').value;
+            const shippingFee = securePurchase ? getSecureShippingFeeFromSettings(shippingDesi) : 0;
             const price = Number(document.getElementById('new-price').value || 0);
             const duration = Number(normalizeListingDuration(document.getElementById('new-duration-days').value));
             const files = getSelectedListingFiles();
@@ -3814,6 +4321,7 @@
                             <span class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(category || 'Kategori')}</span>
                             ${condition ? `<span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(condition)}</span>` : ''}
                             ${exchangeOpen ? '<span class="bg-orange-50 text-orange-700 border border-orange-100 px-3 py-1 rounded-full text-[10px] font-black lowercase">Takasa açık</span>' : ''}
+                            ${securePurchase ? '<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black">Güvenli alışveriş</span>' : ''}
                         </div>
                         <h3 class="text-2xl font-black text-gray-800 break-words">${escapeHtml(fullTitle)}</h3>
                         <p class="mt-3 text-sm text-gray-500 whitespace-pre-wrap break-words">${escapeHtml(desc || 'Açıklama yok.')}</p>
@@ -3821,6 +4329,13 @@
                             <p class="text-[10px] font-black text-gray-400 uppercase">Başlangıç Fiyatı</p>
                             <p class="text-2xl font-black text-orange-600">${Number(price || 0).toLocaleString()} ₺</p>
                             <p class="mt-2 text-[10px] font-bold text-gray-400"><i class="fa-solid fa-clock mr-1"></i>${getRemainingTime(endTime)}</p>
+                            ${securePurchase ? `<div class="mt-3 rounded-xl bg-green-50 border border-green-100 p-3 text-[10px] font-black text-green-800">
+                                <p><i class="fa-solid fa-shield-halved mr-1"></i>Güvenli alışveriş açık</p>
+                                <p class="mt-1">Kargo: ${escapeHtml(siteSettings.secure_shipping_carrier || 'Anlaşmalı kargo')}</p>
+                                <p class="mt-1">${escapeHtml(getShippingPayerLabel(shippingPayer))}</p>
+                                <p class="mt-1">Desi: ${escapeHtml(shippingDesi || '-')} · Kargo ücreti: ${formatTl(shippingFee)}</p>
+                                <p class="mt-1">PayTR tahsilat tutarı: ${formatTl(price + (shippingPayer === 'buyer' ? shippingFee : 0))}</p>
+                            </div>` : ''}
                         </div>
                         <div class="mt-4 flex gap-2">
                             <button onclick="toggleModal('modal-listing-preview')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl text-xs font-black transition">Düzenle</button>
@@ -3865,6 +4380,9 @@
                 desc: document.getElementById('new-desc').value,
                 condition: document.getElementById('new-condition').value,
                 exchangeOpen: document.getElementById('exchange-open').checked,
+                securePurchase: document.getElementById('secure-purchase').checked,
+                shippingPayer: getSelectedShippingPayer(),
+                shippingDesi: document.getElementById('new-shipping-desi').value,
                 startFromOne: document.getElementById('start-from-one').checked,
                 price: document.getElementById('new-price').value,
                 duration: document.getElementById('new-duration-days').value
@@ -3890,6 +4408,13 @@
             document.getElementById('new-desc').value = draft.desc || '';
             document.getElementById('new-condition').value = draft.condition || '';
             document.getElementById('exchange-open').checked = Boolean(draft.exchangeOpen);
+            document.getElementById('secure-purchase').checked = Boolean(draft.securePurchase);
+            const shippingPayer = draft.shippingPayer === 'seller' ? 'seller' : 'buyer';
+            const shippingPayerInput = document.querySelector(`input[name="new-shipping-payer"][value="${shippingPayer}"]`);
+            if (shippingPayerInput) shippingPayerInput.checked = true;
+            document.getElementById('new-shipping-desi').value = draft.shippingDesi || '';
+            toggleSecureShippingOptions();
+            toggleShippingDesiSelect();
             document.getElementById('start-from-one').checked = Boolean(draft.startFromOne);
             document.getElementById('new-price').value = draft.price || '';
             document.getElementById('new-duration-days').value = normalizeListingDuration(draft.duration);
@@ -3905,6 +4430,11 @@
             if (productTitle === "") { showScreenNotice("Ürün başlığı zorunludur", "error"); titleInput.focus(); return; }
             const conditionInput = document.getElementById('new-condition');
             if (!conditionInput.value) { showScreenNotice("Ürün durumunu seçmelisiniz", "error"); conditionInput.focus(); return; }
+            const securePurchase = document.getElementById('secure-purchase').checked;
+            const shippingPayer = getSelectedShippingPayer();
+            const shippingDesiInput = document.getElementById('new-shipping-desi');
+            if (securePurchase && !shippingPayer) { showScreenNotice("Kargoyu kimin ödeyeceğini seçmelisiniz", "error"); return; }
+            if (securePurchase && !shippingDesiInput.value) { showScreenNotice("Kargo desisini seçmelisiniz", "error"); shippingDesiInput.focus(); return; }
 
             const imageInputs = Array.from(document.querySelectorAll('.new-img-input'));
             const selectedFiles = getSelectedListingFiles();
@@ -3930,6 +4460,9 @@
                     desc: document.getElementById('new-desc').value, 
                     condition: conditionInput.value,
                     exchangeOpen: document.getElementById('exchange-open').checked,
+                    securePurchase: securePurchase,
+                    shippingPayer: shippingPayer,
+                    shippingDesi: shippingDesiInput.value,
                     startPrice: startPrice, 
                     startFromOne: startFromOne,
                     durationDays: document.getElementById('new-duration-days').value,
@@ -3945,6 +4478,8 @@
                 document.getElementById('new-desc').value = "";
                 document.getElementById('new-condition').value = "";
                 document.getElementById('exchange-open').checked = false;
+                document.getElementById('secure-purchase').checked = false;
+                toggleSecureShippingOptions();
                 document.getElementById('new-price').value = "";
                 localStorage.removeItem('listingDraft');
                 await fetchProducts();

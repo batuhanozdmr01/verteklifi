@@ -98,6 +98,7 @@ class User(UserMixin, db.Model):
     address_detail = db.Column(db.String(300), nullable=True)
     address_privacy = db.Column(db.String(30), default='after_sale')
     availability_text = db.Column(db.String(200), nullable=True)
+    payout_iban = db.Column(db.String(40), nullable=True)
     withdraw_count = db.Column(db.Integer, default=0)
     
     products = db.relationship('Product', backref='owner', foreign_keys='Product.owner_id', cascade="all, delete-orphan", lazy=True)
@@ -139,6 +140,9 @@ class ProductExtra(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), primary_key=True)
     condition = db.Column(db.String(40), nullable=True)
     exchange_open = db.Column(db.Boolean, default=False)
+    secure_purchase_enabled = db.Column(db.Boolean, default=False)
+    shipping_payer = db.Column(db.String(20), default='buyer')
+    shipping_desi = db.Column(db.Integer, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Bid(db.Model):
@@ -222,6 +226,9 @@ class FeaturedRequest(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     status = db.Column(db.String(20), default='pending', index=True)
+    payment_status = db.Column(db.String(30), default='pending')
+    payment_amount = db.Column(db.Integer, default=0)
+    paytr_amount_kurus = db.Column(db.Integer, default=0)
     admin_response = db.Column(db.String(300), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     resolved_at = db.Column(db.DateTime, nullable=True)
@@ -371,6 +378,79 @@ class SaleProgress(db.Model):
     shipping_carrier = db.Column(db.String(60), nullable=True)
     tracking_code = db.Column(db.String(120), nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class PaymentIntent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False, unique=True, index=True)
+    buyer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    status = db.Column(db.String(30), default='draft', index=True)
+    provider = db.Column(db.String(30), default='paytr')
+    provider_reference = db.Column(db.String(120), nullable=True)
+    product_amount = db.Column(db.Integer, default=0)
+    shipping_fee = db.Column(db.Integer, default=0)
+    service_fee = db.Column(db.Integer, default=0)
+    commission_fee = db.Column(db.Integer, default=0)
+    buyer_total = db.Column(db.Integer, default=0)
+    seller_gross = db.Column(db.Integer, default=0)
+    seller_payout_amount = db.Column(db.Integer, default=0)
+    seller_shipping_debt = db.Column(db.Integer, default=0)
+    platform_total_fee = db.Column(db.Integer, default=0)
+    paytr_amount_kurus = db.Column(db.Integer, default=0)
+    shipping_payer = db.Column(db.String(20), default='buyer')
+    shipping_carrier = db.Column(db.String(80), nullable=True)
+    shipping_desi = db.Column(db.Integer, nullable=True)
+    currency = db.Column(db.String(3), default='TRY')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class PaymentTransaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    payment_intent_id = db.Column(db.Integer, db.ForeignKey('payment_intent.id'), nullable=False, index=True)
+    provider = db.Column(db.String(30), default='paytr')
+    transaction_type = db.Column(db.String(30), default='payment')
+    status = db.Column(db.String(30), default='created')
+    amount = db.Column(db.Integer, default=0)
+    provider_reference = db.Column(db.String(120), nullable=True)
+    raw_payload = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class PlatformFee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    payment_intent_id = db.Column(db.Integer, db.ForeignKey('payment_intent.id'), nullable=False, index=True)
+    fee_type = db.Column(db.String(40), nullable=False)
+    payer = db.Column(db.String(20), default='buyer')
+    amount = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ShippingCharge(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    payment_intent_id = db.Column(db.Integer, db.ForeignKey('payment_intent.id'), nullable=False, unique=True, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False, index=True)
+    carrier = db.Column(db.String(80), nullable=True)
+    desi = db.Column(db.Integer, nullable=True)
+    payer = db.Column(db.String(20), default='buyer')
+    amount = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(30), default='quoted')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class SellerPayout(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    payment_intent_id = db.Column(db.Integer, db.ForeignKey('payment_intent.id'), nullable=False, unique=True, index=True)
+    seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    amount = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(30), default='pending')
+    available_at = db.Column(db.DateTime, nullable=True)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class PaymentErrorLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(40), default='payment')
+    message = db.Column(db.String(300), nullable=False)
+    payload = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -563,9 +643,25 @@ DEFAULT_SITE_SETTINGS = {
     "max_images": "5",
     "featured_price": "5",
     "maintenance_mode": "0",
+    "payment_service_fee_fixed": "0",
+    "payment_service_fee_percent": "0",
+    "platform_commission_percent": "0",
+    "buyer_auto_confirm_days": "3",
     "support_phone": "",
     "support_email": "",
     "support_instagram": "",
+    "secure_shipping_carrier": "Yurtiçi Kargo",
+    "secure_shipping_rates": json.dumps({
+        "1": 65,
+        "2": 75,
+        "3": 85,
+        "4": 95,
+        "5": 110,
+        "10": 160,
+        "15": 220,
+        "20": 280,
+        "30": 390
+    }, ensure_ascii=False),
     "kvkk_text": (
         "Bu platform, kullanıcıların ikinci el ürün ilanı paylaşması, teklif alması, takas teklifi göndermesi, "
         "favori oluşturması, özel mesajlaşması ve şikayet/destek talebi iletmesi için hizmet veren bir ilan ve "
@@ -581,6 +677,13 @@ DEFAULT_SITE_SETTINGS = {
         "satıcıya aittir.\n\n"
         "Kişisel verileriniz, yasal zorunluluklar dışında üçüncü kişilerle paylaşılmaz. Hesabınız ve verilerinizle ilgili "
         "taleplerinizi profilinizdeki destek/bize ulaşın alanlarından iletebilirsiniz."
+    ),
+    "sales_terms_text": (
+        "Verteklifi güvenli alışveriş sürecinde alıcı ödemesi, ödeme kuruluşu ve platform kayıtları üzerinden takip edilir. "
+        "Ödeme alındığında tutar satıcıya hemen aktarılmaz; teslimat, alıcı onayı ve itiraz süreci tamamlanana kadar güvenli işlem kaydı olarak bekletilir.\n\n"
+        "Kargo ücreti ilanda seçilen ödeme tarafına göre alıcıdan tahsil edilebilir veya satıcı alacağından mahsup edilebilir. "
+        "Alıcı teslim aldığı üründe sorun bildirirse ödeme aktarımı admin incelemesi sonuçlanana kadar durdurulabilir.\n\n"
+        "Kullanıcılar satış, ödeme, kargo, iade ve itiraz süreçlerinde doğru bilgi vermekle yükümlüdür. Platform; komisyon, işlem ücreti, kargo ücreti ve satıcı aktarım tutarlarını işlem kayıtlarında gösterebilir."
     )
 }
 
@@ -624,6 +727,65 @@ def safe_int(value, fallback, minimum=None, maximum=None):
         parsed = min(maximum, parsed)
     return parsed
 
+def parse_secure_shipping_rates(raw_rates):
+    try:
+        loaded = json.loads(raw_rates or "{}")
+    except (TypeError, ValueError):
+        loaded = {}
+    if not isinstance(loaded, dict):
+        loaded = {}
+    rates = {}
+    for key, value in loaded.items():
+        desi = safe_int(key, 0, 0, 1000)
+        price = safe_int(value, 0, 0, 1000000)
+        if desi > 0 and price >= 0:
+            rates[str(desi)] = price
+    if not rates:
+        return json.loads(DEFAULT_SITE_SETTINGS["secure_shipping_rates"])
+    return dict(sorted(rates.items(), key=lambda item: int(item[0])))
+
+def calculate_secure_shipping_fee(desi, rates):
+    desi = safe_int(desi, 0, 0, 1000)
+    if desi <= 0:
+        return 0
+    numeric_rates = sorted((int(key), int(value)) for key, value in rates.items())
+    for rate_desi, price in numeric_rates:
+        if desi <= rate_desi:
+            return price
+    return numeric_rates[-1][1] if numeric_rates else 0
+
+def build_secure_payment_summary(product, extra=None, settings=None):
+    extra = extra or get_product_extra(product.id)
+    settings = settings or get_site_settings()
+    secure_enabled = bool(extra and extra.secure_purchase_enabled)
+    desi = extra.shipping_desi if secure_enabled and extra else None
+    shipping_fee = calculate_secure_shipping_fee(desi, settings["secure_shipping_rates"]) if secure_enabled else 0
+    shipping_payer = extra.shipping_payer if extra and extra.shipping_payer in {'buyer', 'seller'} else 'buyer'
+    product_amount = int(product.current_bid or product.start_price or 0)
+    service_fee = settings["payment_service_fee_fixed"] + round(product_amount * settings["payment_service_fee_percent"] / 100)
+    commission_fee = round(product_amount * settings["platform_commission_percent"] / 100)
+    buyer_total = product_amount + service_fee + (shipping_fee if shipping_payer == 'buyer' else 0)
+    seller_shipping_debt = shipping_fee if shipping_payer == 'seller' else 0
+    seller_payout_amount = max(0, product_amount - commission_fee - seller_shipping_debt)
+    platform_total_fee = service_fee + commission_fee
+    return {
+        "enabled": secure_enabled,
+        "carrier": settings["secure_shipping_carrier"],
+        "desi": desi,
+        "shippingFee": shipping_fee,
+        "serviceFee": service_fee,
+        "commissionFee": commission_fee,
+        "shippingPayer": shipping_payer,
+        "shippingPayerLabel": "Alıcı öder" if shipping_payer == 'buyer' else "Satıcı öder",
+        "productAmount": product_amount,
+        "buyerTotal": buyer_total,
+        "sellerPayoutAmount": seller_payout_amount,
+        "sellerShippingDebt": seller_shipping_debt,
+        "platformTotalFee": platform_total_fee,
+        "paytrAmountKurus": buyer_total * 100,
+        "chargeRule": "Kargo ücreti alıcıdan tahsil edilir." if shipping_payer == 'buyer' else "Kargo ücreti satıcı bakiyesinden/kesintisinden alınır."
+    }
+
 def get_site_settings():
     settings = DEFAULT_SITE_SETTINGS.copy()
     for setting in SiteSetting.query.all():
@@ -632,6 +794,7 @@ def get_site_settings():
     if default_duration_days not in {1, 7, 30, 90, 180}:
         default_duration_days = 7
 
+    secure_shipping_rates = parse_secure_shipping_rates(settings.get("secure_shipping_rates"))
     return {
         "min_bid": safe_int(settings.get("min_bid"), 5, 1, 1000000),
         "bid_step": safe_int(settings.get("bid_step"), 5, 1, 1000000),
@@ -639,11 +802,19 @@ def get_site_settings():
         "default_duration_days": default_duration_days,
         "max_images": safe_int(settings.get("max_images"), 5, 1, 5),
         "featured_price": safe_int(settings.get("featured_price"), 5, 0, 1000000),
+        "payment_service_fee_fixed": safe_int(settings.get("payment_service_fee_fixed"), 0, 0, 1000000),
+        "payment_service_fee_percent": safe_int(settings.get("payment_service_fee_percent"), 0, 0, 100),
+        "platform_commission_percent": safe_int(settings.get("platform_commission_percent"), 0, 0, 100),
+        "buyer_auto_confirm_days": safe_int(settings.get("buyer_auto_confirm_days"), 3, 1, 14),
         "maintenance_mode": settings.get("maintenance_mode", "0") == "1",
         "support_phone": repair_turkish_mojibake(settings.get("support_phone", "")),
         "support_email": repair_turkish_mojibake(settings.get("support_email", "")),
         "support_instagram": repair_turkish_mojibake(settings.get("support_instagram", "")),
-        "kvkk_text": repair_turkish_mojibake(settings.get("kvkk_text", DEFAULT_SITE_SETTINGS["kvkk_text"]))
+        "secure_shipping_carrier": repair_turkish_mojibake(settings.get("secure_shipping_carrier", DEFAULT_SITE_SETTINGS["secure_shipping_carrier"]))[:80],
+        "secure_shipping_rates": secure_shipping_rates,
+        "secure_shipping_rates_text": json.dumps(secure_shipping_rates, ensure_ascii=False, indent=2),
+        "kvkk_text": repair_turkish_mojibake(settings.get("kvkk_text", DEFAULT_SITE_SETTINGS["kvkk_text"])),
+        "sales_terms_text": repair_turkish_mojibake(settings.get("sales_terms_text", DEFAULT_SITE_SETTINGS["sales_terms_text"]))
     }
 
 def update_site_setting(key, value):
@@ -949,9 +1120,13 @@ def get_sale_progress(product_id):
 
 def serialize_sale_progress(product_id):
     progress = SaleProgress.query.filter_by(product_id=product_id).first()
+    settings = get_site_settings()
     sale_issue_open = Report.query.filter_by(product_id=product_id, target_type='sale').filter(
         Report.status.in_(['open', 'reviewing'])
     ).count() > 0
+    auto_confirm_at = None
+    if progress and progress.shipping_status == 'teslim_edildi' and not progress.buyer_received_confirmed:
+        auto_confirm_at = progress.updated_at + timedelta(days=settings["buyer_auto_confirm_days"])
     return {
         "contact_made": bool(progress and progress.contact_made),
         "delivered": bool(progress and progress.delivered),
@@ -961,8 +1136,274 @@ def serialize_sale_progress(product_id):
         "sale_issue_open": sale_issue_open,
         "shipping_status": (progress.shipping_status if progress and progress.shipping_status else 'hazirlaniyor'),
         "shipping_carrier": repair_turkish_mojibake(progress.shipping_carrier or "") if progress else "",
-        "tracking_code": repair_turkish_mojibake(progress.tracking_code or "") if progress else ""
+        "tracking_code": repair_turkish_mojibake(progress.tracking_code or "") if progress else "",
+        "auto_confirm_at": auto_confirm_at.strftime('%d.%m.%Y %H:%M') if auto_confirm_at else None
     }
+
+def get_or_create_payment_intent(product):
+    if not product.matched_user_id:
+        return None
+    extra = get_product_extra(product.id)
+    settings = get_site_settings()
+    summary = build_secure_payment_summary(product, extra, settings)
+    intent = PaymentIntent.query.filter_by(product_id=product.id).first()
+    if not intent:
+        intent = PaymentIntent(
+            product_id=product.id,
+            buyer_id=product.matched_user_id,
+            seller_id=product.owner_id,
+            status='pending',
+            provider='paytr'
+        )
+        db.session.add(intent)
+        db.session.flush()
+    elif intent.status == 'draft':
+        intent.status = 'pending'
+    intent.buyer_id = product.matched_user_id
+    intent.seller_id = product.owner_id
+    intent.product_amount = summary["productAmount"]
+    intent.shipping_fee = summary["shippingFee"]
+    intent.service_fee = summary["serviceFee"]
+    intent.commission_fee = summary["commissionFee"]
+    intent.buyer_total = summary["buyerTotal"]
+    intent.seller_gross = summary["productAmount"]
+    intent.seller_payout_amount = summary["sellerPayoutAmount"]
+    intent.seller_shipping_debt = summary["sellerShippingDebt"]
+    intent.platform_total_fee = summary["platformTotalFee"]
+    intent.paytr_amount_kurus = summary["paytrAmountKurus"]
+    intent.shipping_payer = summary["shippingPayer"]
+    intent.shipping_carrier = summary["carrier"]
+    intent.shipping_desi = summary["desi"]
+    intent.currency = 'TRY'
+
+    ShippingCharge.query.filter_by(payment_intent_id=intent.id).delete()
+    PlatformFee.query.filter_by(payment_intent_id=intent.id).delete()
+    db.session.add(ShippingCharge(
+        payment_intent_id=intent.id,
+        product_id=product.id,
+        carrier=summary["carrier"],
+        desi=summary["desi"],
+        payer=summary["shippingPayer"],
+        amount=summary["shippingFee"],
+        status='quoted'
+    ))
+    if summary["serviceFee"] > 0:
+        db.session.add(PlatformFee(payment_intent_id=intent.id, fee_type='service_fee', payer='buyer', amount=summary["serviceFee"]))
+    if summary["commissionFee"] > 0:
+        db.session.add(PlatformFee(payment_intent_id=intent.id, fee_type='commission', payer='seller', amount=summary["commissionFee"]))
+
+    payout = SellerPayout.query.filter_by(payment_intent_id=intent.id).first()
+    if not payout:
+        payout = SellerPayout(payment_intent_id=intent.id, seller_id=product.owner_id)
+        db.session.add(payout)
+    payout.seller_id = product.owner_id
+    payout.amount = summary["sellerPayoutAmount"]
+    payout.status = 'pending'
+    if not PaymentTransaction.query.filter_by(payment_intent_id=intent.id, transaction_type='payment').first():
+        db.session.add(PaymentTransaction(
+            payment_intent_id=intent.id,
+            provider='paytr',
+            transaction_type='payment',
+            status='created',
+            amount=summary["buyerTotal"],
+            raw_payload=json.dumps({
+                "product_id": product.id,
+                "paytr_amount_kurus": summary["paytrAmountKurus"],
+                "note": "PayTR canlı entegrasyonunda token/callback bu kayda bağlanacak."
+            }, ensure_ascii=False)
+        ))
+    return intent
+
+def is_paytr_configured():
+    return bool(os.environ.get('PAYTR_MERCHANT_ID') and os.environ.get('PAYTR_MERCHANT_KEY') and os.environ.get('PAYTR_MERCHANT_SALT'))
+
+def get_public_base_url():
+    configured_url = os.environ.get('PUBLIC_BASE_URL')
+    if configured_url:
+        return configured_url.rstrip('/')
+    return request.host_url.rstrip('/')
+
+def get_client_ip():
+    forwarded_for = request.headers.get('X-Forwarded-For', '')
+    return (forwarded_for.split(',')[0].strip() or request.remote_addr or '127.0.0.1')[:39]
+
+def ensure_payment_provider_reference(intent):
+    if not intent.provider_reference:
+        intent.provider_reference = f"VT{intent.id}{uuid.uuid4().hex[:12]}".upper()[:64]
+        db.session.flush()
+    return intent.provider_reference
+
+def build_paytr_callback_hash(merchant_oid, status, total_amount):
+    merchant_key = os.environ.get('PAYTR_MERCHANT_KEY', '').encode('utf-8')
+    merchant_salt = os.environ.get('PAYTR_MERCHANT_SALT', '')
+    token = f"{merchant_oid}{merchant_salt}{status}{total_amount}".encode('utf-8')
+    return base64.b64encode(hmac.new(merchant_key, token, hashlib.sha256).digest()).decode('utf-8')
+
+def mark_payment_success(intent, total_amount=None, raw_payload=None):
+    if intent.status in {'paid', 'escrow', 'ready_for_payout', 'paid_out'}:
+        return False
+    intent.status = 'escrow'
+    if total_amount is not None:
+        try:
+            intent.paytr_amount_kurus = int(total_amount)
+            intent.buyer_total = round(int(total_amount) / 100)
+        except (TypeError, ValueError):
+            pass
+    db.session.add(PaymentTransaction(
+        payment_intent_id=intent.id,
+        provider='paytr',
+        transaction_type='callback',
+        status='success',
+        amount=intent.buyer_total,
+        provider_reference=intent.provider_reference,
+        raw_payload=json.dumps(raw_payload or {}, ensure_ascii=False)
+    ))
+    create_notification(
+        intent.buyer_id,
+        "Ödeme alındı",
+        "Ödemeniz güvenli havuza geçti. Satıcı kargoya verebilir.",
+        "payment",
+        intent.product_id
+    )
+    create_notification(
+        intent.seller_id,
+        "Ödeme alındı",
+        "Alıcının ödemesi güvenli havuza geçti. Kargo sürecini başlatabilirsiniz.",
+        "payment",
+        intent.product_id
+    )
+    return True
+
+def mark_payment_failed(intent, raw_payload=None):
+    intent.status = 'cancelled'
+    db.session.add(PaymentTransaction(
+        payment_intent_id=intent.id,
+        provider='paytr',
+        transaction_type='callback',
+        status='failed',
+        amount=intent.buyer_total,
+        provider_reference=intent.provider_reference,
+        raw_payload=json.dumps(raw_payload or {}, ensure_ascii=False)
+    ))
+    create_notification(
+        intent.buyer_id,
+        "Ödeme başarısız",
+        "PayTR ödeme işlemi tamamlanamadı. Tekrar deneyebilirsiniz.",
+        "payment",
+        intent.product_id
+    )
+
+def serialize_payment_intent(product_id):
+    intent = PaymentIntent.query.filter_by(product_id=product_id).first()
+    if not intent:
+        return None
+    status_labels = {
+        "draft": "Ödeme hazırlanıyor",
+        "pending": "Ödeme bekleniyor",
+        "paid": "Ödeme alındı",
+        "escrow": "Para güvende",
+        "ready_for_payout": "Satıcıya aktarılabilir",
+        "paid_out": "Satıcıya aktarıldı",
+        "refunded": "İade edildi",
+        "cancelled": "İptal edildi"
+    }
+    return {
+        "id": intent.id,
+        "status": intent.status,
+        "statusLabel": status_labels.get(intent.status, intent.status),
+        "provider": intent.provider,
+        "productAmount": intent.product_amount,
+        "shippingFee": intent.shipping_fee,
+        "serviceFee": intent.service_fee,
+        "commissionFee": intent.commission_fee,
+        "buyerTotal": intent.buyer_total,
+        "sellerPayoutAmount": intent.seller_payout_amount,
+        "sellerShippingDebt": intent.seller_shipping_debt,
+        "platformTotalFee": intent.platform_total_fee,
+        "paytrAmountKurus": intent.paytr_amount_kurus,
+        "shippingPayer": intent.shipping_payer,
+        "shippingCarrier": repair_turkish_mojibake(intent.shipping_carrier or ""),
+        "shippingDesi": intent.shipping_desi,
+        "currency": intent.currency
+    }
+
+def get_user_wallet_summary(user_id):
+    seller_intents = PaymentIntent.query.filter_by(seller_id=user_id).all()
+    buyer_intents = PaymentIntent.query.filter_by(buyer_id=user_id).all()
+    payouts = SellerPayout.query.filter_by(seller_id=user_id).all()
+    return {
+        "pendingPayout": sum(payout.amount or 0 for payout in payouts if payout.status in {'pending', 'ready'}),
+        "paidOut": sum(payout.amount or 0 for payout in payouts if payout.status == 'paid'),
+        "salesGross": sum(intent.product_amount or 0 for intent in seller_intents),
+        "commissionPaid": sum(intent.commission_fee or 0 for intent in seller_intents),
+        "shippingDebt": sum(intent.seller_shipping_debt or 0 for intent in seller_intents),
+        "purchaseTotal": sum(intent.buyer_total or 0 for intent in buyer_intents),
+        "openPayments": sum(1 for intent in buyer_intents if intent.status in {'draft', 'pending'})
+    }
+
+def get_user_payment_rows(user_id, limit=8):
+    intents = PaymentIntent.query.filter(
+        (PaymentIntent.buyer_id == user_id) | (PaymentIntent.seller_id == user_id)
+    ).order_by(PaymentIntent.created_at.desc()).limit(limit).all()
+    rows = []
+    for intent in intents:
+        product = Product.query.get(intent.product_id)
+        rows.append({
+            "id": intent.id,
+            "productId": intent.product_id,
+            "productTitle": repair_turkish_mojibake(product.title) if product else "Silinmiş ilan",
+            "role": "seller" if intent.seller_id == user_id else "buyer",
+            "status": intent.status,
+            "statusLabel": serialize_payment_intent(intent.product_id)["statusLabel"],
+            "buyerTotal": intent.buyer_total,
+            "sellerPayoutAmount": intent.seller_payout_amount,
+            "platformTotalFee": intent.platform_total_fee,
+            "createdAt": intent.created_at.strftime('%d.%m.%Y %H:%M')
+        })
+    return rows
+
+def serialize_profile_product(product):
+    payment = serialize_payment_intent(product.id)
+    progress = serialize_sale_progress(product.id) if product.status == 'completed' else None
+    return {
+        "id": product.id,
+        "title": repair_turkish_mojibake(product.title),
+        "img": product.image_url,
+        "currentBid": product.current_bid,
+        "status": product.status,
+        "statusLabel": get_product_status_label(product.status),
+        "createdAt": product.created_at.strftime('%d.%m.%Y'),
+        "buyerName": product.matched_user.name if product.matched_user else "",
+        "sellerName": repair_turkish_mojibake(product.owner_name or ""),
+        "payment": payment,
+        "progress": progress
+    }
+
+def get_finance_summary():
+    intents = PaymentIntent.query.all()
+    payouts = SellerPayout.query.all()
+    featured_requests = FeaturedRequest.query.all()
+    return {
+        "grossVolume": sum(intent.buyer_total or 0 for intent in intents),
+        "productVolume": sum(intent.product_amount or 0 for intent in intents),
+        "shippingVolume": sum(intent.shipping_fee or 0 for intent in intents),
+        "serviceFees": sum(intent.service_fee or 0 for intent in intents),
+        "commissionFees": sum(intent.commission_fee or 0 for intent in intents),
+        "platformFees": sum(intent.platform_total_fee or 0 for intent in intents),
+        "pendingPayout": sum(payout.amount or 0 for payout in payouts if payout.status in {'pending', 'ready'}),
+        "paidOut": sum(payout.amount or 0 for payout in payouts if payout.status == 'paid'),
+        "openPaymentCount": sum(1 for intent in intents if intent.status in {'draft', 'pending'}),
+        "paidPaymentCount": sum(1 for intent in intents if intent.status in {'paid', 'escrow', 'ready_for_payout', 'paid_out'}),
+        "featuredPendingAmount": sum(request.payment_amount or 0 for request in featured_requests if request.payment_status == 'pending'),
+        "featuredPaidAmount": sum(request.payment_amount or 0 for request in featured_requests if request.payment_status == 'paid')
+    }
+
+def log_payment_error(source, message, payload=None):
+    db.session.add(PaymentErrorLog(
+        source=source[:40],
+        message=repair_turkish_mojibake(str(message))[:300],
+        payload=json.dumps(payload or {}, ensure_ascii=False)[:2000] if payload is not None else None
+    ))
 
 def save_product_images(images):
     upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'products')
@@ -1077,6 +1518,10 @@ def notify_saved_search_matches(product):
 
 def is_product_visible_to_current_user(product):
     moderation = ProductModeration.query.get(product.id)
+    if product.status in {'completed', 'cancelled'}:
+        if not current_user.is_authenticated:
+            return False
+        return can_access_admin_panel() or product.owner_id == current_user.id or product.matched_user_id == current_user.id
     if product.status == 'pending_admin_approval':
         if not current_user.is_authenticated:
             return False
@@ -1272,6 +1717,13 @@ def ensure_configured_admin():
 
 def ensure_optional_database_columns():
     try:
+        product_extra_columns = {row[1] for row in db.session.execute(text("PRAGMA table_info(product_extra)")).fetchall()}
+        if 'secure_purchase_enabled' not in product_extra_columns:
+            db.session.execute(text("ALTER TABLE product_extra ADD COLUMN secure_purchase_enabled BOOLEAN DEFAULT 0"))
+        if 'shipping_payer' not in product_extra_columns:
+            db.session.execute(text("ALTER TABLE product_extra ADD COLUMN shipping_payer VARCHAR(20) DEFAULT 'buyer'"))
+        if 'shipping_desi' not in product_extra_columns:
+            db.session.execute(text("ALTER TABLE product_extra ADD COLUMN shipping_desi INTEGER"))
         sale_columns = {row[1] for row in db.session.execute(text("PRAGMA table_info(sale_progress)")).fetchall()}
         if 'shipping_status' not in sale_columns:
             db.session.execute(text("ALTER TABLE sale_progress ADD COLUMN shipping_status VARCHAR(30) DEFAULT 'hazirlaniyor'"))
@@ -1290,6 +1742,15 @@ def ensure_optional_database_columns():
             db.session.execute(text("ALTER TABLE user ADD COLUMN address_privacy VARCHAR(30) DEFAULT 'after_sale'"))
         if 'availability_text' not in user_columns:
             db.session.execute(text("ALTER TABLE user ADD COLUMN availability_text VARCHAR(200)"))
+        if 'payout_iban' not in user_columns:
+            db.session.execute(text("ALTER TABLE user ADD COLUMN payout_iban VARCHAR(40)"))
+        featured_request_columns = {row[1] for row in db.session.execute(text("PRAGMA table_info(featured_request)")).fetchall()}
+        if 'payment_status' not in featured_request_columns:
+            db.session.execute(text("ALTER TABLE featured_request ADD COLUMN payment_status VARCHAR(30) DEFAULT 'pending'"))
+        if 'payment_amount' not in featured_request_columns:
+            db.session.execute(text("ALTER TABLE featured_request ADD COLUMN payment_amount INTEGER DEFAULT 0"))
+        if 'paytr_amount_kurus' not in featured_request_columns:
+            db.session.execute(text("ALTER TABLE featured_request ADD COLUMN paytr_amount_kurus INTEGER DEFAULT 0"))
         db.session.commit()
     except OperationalError:
         db.session.rollback()
@@ -1352,6 +1813,19 @@ def build_sale_seller_info(product):
         info["addressDetail"] = repair_turkish_mojibake(seller.address_detail or "")
     return info
 
+def build_sale_buyer_info(product):
+    buyer = User.query.get(product.matched_user_id)
+    if not buyer:
+        return None
+    return {
+        "name": repair_turkish_mojibake(buyer.name or ""),
+        "phone": buyer.phone,
+        "email": buyer.email,
+        "location": " / ".join(part for part in (buyer.city, buyer.district, buyer.neighborhood) if part),
+        "addressDetail": repair_turkish_mojibake(buyer.address_detail or ""),
+        "availability": repair_turkish_mojibake(buyer.availability_text or "")
+    }
+
 def is_admin_user(user=None):
     user = user or current_user
     if not user or not user.is_authenticated:
@@ -1388,6 +1862,7 @@ def bootstrap_configured_admin():
 def get_products():
     cleanup_expired_products()
     products = Product.query.order_by(Product.id.desc()).all()
+    settings = get_site_settings()
     favorite_product_ids = set()
     if current_user.is_authenticated:
         favorite_product_ids = {
@@ -1403,6 +1878,7 @@ def get_products():
         owner_moderation = UserModeration.query.get(p.owner_id)
         owner_rating = get_user_rating_summary(p.owner_id)
         featured = is_featured_product(p.id)
+        secure_payment = build_secure_payment_summary(p, extra, settings)
         prod_data = {
             "id": p.id,
             "title": p.title,
@@ -1429,6 +1905,21 @@ def get_products():
             "isFeatured": featured,
             "condition": extra.condition if extra and extra.condition else None,
             "exchangeOpen": bool(extra and extra.exchange_open),
+            "securePurchase": secure_payment["enabled"],
+            "shippingPayer": secure_payment["shippingPayer"],
+            "shippingPayerLabel": secure_payment["shippingPayerLabel"],
+            "shippingDesi": secure_payment["desi"],
+            "secureShippingCarrier": secure_payment["carrier"],
+            "secureShippingFee": secure_payment["shippingFee"],
+            "securePaymentBuyerTotal": secure_payment["buyerTotal"],
+            "securePaymentProductAmount": secure_payment["productAmount"],
+            "securePaymentServiceFee": secure_payment["serviceFee"],
+            "securePaymentCommissionFee": secure_payment["commissionFee"],
+            "securePaymentPaytrAmountKurus": secure_payment["paytrAmountKurus"],
+            "securePaymentSellerPayoutAmount": secure_payment["sellerPayoutAmount"],
+            "securePaymentSellerShippingDebt": secure_payment["sellerShippingDebt"],
+            "securePaymentPlatformTotalFee": secure_payment["platformTotalFee"],
+            "securePaymentChargeRule": secure_payment["chargeRule"],
             "isHidden": bool(moderation and moderation.is_hidden),
             "imageFlagged": bool(moderation and moderation.image_flagged),
             "matched_user_id": p.matched_user_id,
@@ -1457,8 +1948,17 @@ def get_products():
                     "comment": repair_turkish_mojibake(existing_rating.comment or "")
                 } if existing_rating else None
             if p.status == 'completed' and can_view_sale_contact(p):
-                prod_data["seller_info"] = build_sale_seller_info(p)
+                seller_info = build_sale_seller_info(p)
+                if seller_info and current_user.id == p.matched_user_id and not is_admin_user():
+                    seller_info = {
+                        "phone": seller_info.get("phone"),
+                        "email": seller_info.get("email")
+                    }
+                prod_data["seller_info"] = seller_info
                 prod_data["sale_progress"] = serialize_sale_progress(p.id)
+                prod_data["payment_intent"] = serialize_payment_intent(p.id)
+            if p.status in {'seller_info_confirmation', 'completed'} and (current_user.id == p.owner_id or is_admin_user()):
+                prod_data["buyer_info"] = build_sale_buyer_info(p)
         output.append(prod_data)
     output.sort(key=lambda item: (not item.get("isFeatured"), -item.get("createdAt", 0)))
     return jsonify(output)
@@ -1492,6 +1992,28 @@ def validate_bid_amount(product, amount, settings):
         return "Teklif mevcut fiyattan yuksek olmalidir"
     if amount > product.max_price:
         return f"Maksimum teklif siniri {product.max_price} TL"
+    return None
+
+DAILY_BID_PRODUCT_LIMIT = 10
+
+def daily_bid_window_start():
+    return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+def validate_daily_bid_product_limit(user_id, product_id):
+    day_start = daily_bid_window_start()
+    already_bid_today = Bid.query.filter(
+        Bid.user_id == user_id,
+        Bid.product_id == product_id,
+        Bid.timestamp >= day_start
+    ).first()
+    if already_bid_today:
+        return None
+    daily_product_count = db.session.query(Bid.product_id).filter(
+        Bid.user_id == user_id,
+        Bid.timestamp >= day_start
+    ).distinct().count()
+    if daily_product_count >= DAILY_BID_PRODUCT_LIMIT:
+        return "Günlük teklif hakkınız dolmuştur."
     return None
 
 def add_bid_to_product(product, user, amount, notification_title="Yeni teklif geldi"):
@@ -1549,6 +2071,17 @@ def process_auto_bids(product):
         if not proxy_user or proxy_user.is_banned:
             proxy.is_active = False
             continue
+        limit_message = validate_daily_bid_product_limit(proxy_user.id, product.id)
+        if limit_message:
+            proxy.is_active = False
+            create_notification(
+                proxy_user.id,
+                "Günlük teklif hakkınız doldu",
+                f"{product.title} ilanına otomatik teklif verilemedi. Günlük teklif hakkınız dolmuştur.",
+                "bid",
+                product.id
+            )
+            continue
 
         add_bid_to_product(product, proxy_user, next_amount, "Otomatik teklif geldi")
         if next_amount >= proxy.max_amount or next_amount >= product.max_price:
@@ -1595,6 +2128,10 @@ def place_bid():
     if amount > product.max_price:
         return jsonify({"success": False, "message": f"Maksimum teklif sınırı {product.max_price} ₺"}), 400
 
+    limit_message = validate_daily_bid_product_limit(current_user.id, product.id)
+    if limit_message:
+        return jsonify({"success": False, "message": limit_message}), 400
+
     add_bid_to_product(product, current_user, amount, "Yeni teklif geldi")
     process_auto_bids(product)
     
@@ -1620,6 +2157,9 @@ def set_proxy_bid():
         return jsonify({"success": False, "message": "Maksimum teklif mevcut fiyattan yuksek olmali."}), 400
     if max_amount > product.max_price:
         return jsonify({"success": False, "message": f"Maksimum teklif siniri {product.max_price} TL"}), 400
+    limit_message = validate_daily_bid_product_limit(current_user.id, product.id)
+    if limit_message:
+        return jsonify({"success": False, "message": limit_message}), 400
 
     proxy = ProxyBid.query.filter_by(user_id=current_user.id, product_id=product.id).first()
     if proxy:
@@ -1714,6 +2254,20 @@ def update_sale_progress(product_id):
             setattr(progress, field, bool(data.get(field)))
     progress.delivered = bool(progress.delivered or progress.buyer_received_confirmed)
     progress.paid = bool(progress.paid or progress.seller_payment_confirmed)
+    intent = PaymentIntent.query.filter_by(product_id=product.id).first()
+    if intent:
+        if progress.buyer_received_confirmed and intent.status in {'pending', 'paid', 'escrow'}:
+            intent.status = 'ready_for_payout'
+            payout = SellerPayout.query.filter_by(payment_intent_id=intent.id).first()
+            if payout and payout.status == 'pending':
+                payout.status = 'ready'
+                payout.available_at = datetime.utcnow()
+        if progress.seller_payment_confirmed:
+            intent.status = 'paid_out'
+            payout = SellerPayout.query.filter_by(payment_intent_id=intent.id).first()
+            if payout:
+                payout.status = 'paid'
+                payout.paid_at = datetime.utcnow()
     if (is_admin_user() or current_user.id == product.owner_id) and data.get('shippingStatus') in {'hazirlaniyor', 'kargoda', 'teslim_edildi', 'iptal'}:
         progress.shipping_status = data.get('shippingStatus')
     if is_admin_user() or current_user.id == product.owner_id:
@@ -1730,6 +2284,28 @@ def update_sale_progress(product_id):
     )
     db.session.commit()
     return jsonify({"success": True, "sale_progress": serialize_sale_progress(product.id)})
+
+@app.route('/api/payout/request', methods=['POST'])
+@login_required
+def request_seller_payout():
+    if not current_user.payout_iban:
+        return jsonify({"success": False, "message": "Para çekme talebi için profilinizde IBAN kayıtlı olmalıdır."}), 400
+    payouts = SellerPayout.query.filter_by(seller_id=current_user.id, status='ready').all()
+    if not payouts:
+        return jsonify({"success": False, "message": "Aktarılabilir ödeme bulunamadı."}), 400
+    total = sum(payout.amount or 0 for payout in payouts)
+    for payout in payouts:
+        payout.status = 'requested'
+    admin_users = [user for user in User.query.filter_by(role='admin').all() if is_admin_user(user)]
+    for admin in admin_users:
+        create_unique_unread_notification(
+            admin.id,
+            "Satıcı ödeme talebi",
+            f"{current_user.name}, {total} TL ödeme aktarımı talep etti.",
+            "admin"
+        )
+    db.session.commit()
+    return jsonify({"success": True, "requestedAmount": total})
 
 @app.route('/api/sale_issue/<int:product_id>', methods=['POST'])
 @login_required
@@ -1771,6 +2347,177 @@ def open_sale_issue(product_id):
     log_admin_action("Satış sorunu açıldı", "report", None, product.title)
     db.session.commit()
     return jsonify({"success": True, "sale_progress": serialize_sale_progress(product.id)})
+
+@app.route('/api/shipping_label/<int:product_id>', methods=['GET'])
+@login_required
+def get_shipping_label(product_id):
+    product = Product.query.get(product_id)
+    if not product or product.status != 'completed':
+        return jsonify({"success": False, "message": "Kargo etiketi için tamamlanmış satış gerekir."}), 404
+    if current_user.id not in {product.owner_id, product.matched_user_id} and not can_access_admin_panel():
+        return jsonify({"success": False, "message": "Yetkisiz işlem."}), 403
+    intent = serialize_payment_intent(product.id) or {}
+    return jsonify({
+        "success": True,
+        "label": {
+            "productTitle": repair_turkish_mojibake(product.title),
+            "carrier": intent.get("shippingCarrier") or "",
+            "desi": intent.get("shippingDesi"),
+            "buyer": build_sale_buyer_info(product),
+            "seller": build_sale_seller_info(product),
+            "note": "Anlaşmalı kargo API bağlanınca barkod ve etiket burada otomatik üretilecek."
+        }
+    })
+
+@app.route('/api/payments/create/<int:product_id>', methods=['POST'])
+@login_required
+def create_payment(product_id):
+    product = Product.query.get(product_id)
+    if not product or product.status != 'completed':
+        return jsonify({"success": False, "message": "Ödeme için tamamlanmış satış gerekir."}), 404
+    if product.matched_user_id != current_user.id:
+        return jsonify({"success": False, "message": "Bu ödeme sadece alıcı tarafından başlatılabilir."}), 403
+    intent = get_or_create_payment_intent(product)
+    if not intent:
+        return jsonify({"success": False, "message": "Ödeme kaydı oluşturulamadı."}), 400
+    merchant_oid = ensure_payment_provider_reference(intent)
+    if intent.status in {'paid', 'escrow', 'ready_for_payout', 'paid_out'}:
+        db.session.commit()
+        return jsonify({"success": True, "alreadyPaid": True, "paymentIntent": serialize_payment_intent(product.id)})
+
+    if not is_paytr_configured():
+        intent.status = 'pending'
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "mockMode": True,
+            "message": "PayTR anahtarları tanımlı değil. Test ödeme modu açık.",
+            "paymentIntent": serialize_payment_intent(product.id)
+        })
+
+    base_url = get_public_base_url()
+    user_basket = base64.b64encode(json.dumps([[product.title, f"{intent.buyer_total:.2f}", 1]], ensure_ascii=False).encode('utf-8')).decode('utf-8')
+    payment_amount = str(intent.paytr_amount_kurus)
+    merchant_id = os.environ.get('PAYTR_MERCHANT_ID')
+    merchant_key = os.environ.get('PAYTR_MERCHANT_KEY', '').encode('utf-8')
+    merchant_salt = os.environ.get('PAYTR_MERCHANT_SALT', '')
+    user_ip = get_client_ip()
+    email = current_user.email[:100]
+    no_installment = os.environ.get('PAYTR_NO_INSTALLMENT', '0')
+    max_installment = os.environ.get('PAYTR_MAX_INSTALLMENT', '0')
+    currency = 'TL'
+    test_mode = os.environ.get('PAYTR_TEST_MODE', '1')
+    hash_str = f"{merchant_id}{user_ip}{merchant_oid}{email}{payment_amount}{user_basket}{no_installment}{max_installment}{currency}{test_mode}"
+    paytr_token = base64.b64encode(hmac.new(merchant_key, (hash_str + merchant_salt).encode('utf-8'), hashlib.sha256).digest()).decode('utf-8')
+    form = {
+        "merchant_id": merchant_id,
+        "user_ip": user_ip,
+        "merchant_oid": merchant_oid,
+        "email": email,
+        "payment_amount": payment_amount,
+        "paytr_token": paytr_token,
+        "user_basket": user_basket,
+        "debug_on": os.environ.get('PAYTR_DEBUG_ON', '1'),
+        "no_installment": no_installment,
+        "max_installment": max_installment,
+        "user_name": current_user.name[:60],
+        "user_address": (current_user.address_detail or current_user.city or "Adres")[:400],
+        "user_phone": (current_user.phone or "05000000000")[:20],
+        "merchant_ok_url": f"{base_url}/payment/success/{product.id}",
+        "merchant_fail_url": f"{base_url}/payment/fail/{product.id}",
+        "timeout_limit": os.environ.get('PAYTR_TIMEOUT_LIMIT', '30'),
+        "currency": currency,
+        "test_mode": test_mode,
+        "lang": "tr"
+    }
+    try:
+        request_obj = Request(
+            "https://www.paytr.com/odeme/api/get-token",
+            data=urlencode(form).encode('utf-8'),
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        with urlopen(request_obj, timeout=20) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except Exception as exc:
+        log_payment_error('paytr_token', str(exc), {"product_id": product.id, "intent_id": intent.id})
+        db.session.commit()
+        return jsonify({"success": False, "message": f"PayTR bağlantısı kurulamadı: {exc}"}), 502
+    if payload.get('status') != 'success':
+        log_payment_error('paytr_token', payload.get('reason') or "PayTR token alınamadı.", payload)
+        db.session.commit()
+        return jsonify({"success": False, "message": payload.get('reason') or "PayTR token alınamadı.", "paytr": payload}), 400
+    intent.status = 'pending'
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "mockMode": False,
+        "token": payload.get('token'),
+        "paymentUrl": f"https://www.paytr.com/odeme/guvenli/{payload.get('token')}",
+        "paymentIntent": serialize_payment_intent(product.id)
+    })
+
+@app.route('/api/payments/status/<int:product_id>', methods=['GET'])
+@login_required
+def payment_status(product_id):
+    product = Product.query.get(product_id)
+    if not product or current_user.id not in {product.owner_id, product.matched_user_id} and not can_access_admin_panel():
+        return jsonify({"success": False, "message": "Ödeme kaydı bulunamadı."}), 404
+    return jsonify({
+        "success": True,
+        "productStatus": product.status,
+        "paymentIntent": serialize_payment_intent(product.id),
+        "saleProgress": serialize_sale_progress(product.id) if product.status == 'completed' else None,
+        "unreadNotifications": Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    })
+
+@app.route('/api/payments/mock_complete/<int:product_id>', methods=['POST'])
+@login_required
+def mock_complete_payment(product_id):
+    if is_paytr_configured():
+        return jsonify({"success": False, "message": "PayTR canlı ayarlıyken mock ödeme kapalıdır."}), 403
+    product = Product.query.get(product_id)
+    if not product or product.status != 'completed' or product.matched_user_id != current_user.id:
+        return jsonify({"success": False, "message": "Test ödeme için geçerli satış bulunamadı."}), 404
+    intent = get_or_create_payment_intent(product)
+    ensure_payment_provider_reference(intent)
+    changed = mark_payment_success(intent, intent.paytr_amount_kurus, {"mock": True, "merchant_oid": intent.provider_reference})
+    db.session.commit()
+    return jsonify({"success": True, "changed": changed, "paymentIntent": serialize_payment_intent(product.id)})
+
+@app.route('/paytr/callback', methods=['POST'])
+def paytr_callback():
+    post = request.form.to_dict() or (request.json or {})
+    merchant_oid = str(post.get('merchant_oid') or '')
+    status = str(post.get('status') or '')
+    total_amount = str(post.get('total_amount') or '')
+    callback_hash = str(post.get('hash') or '')
+    if not merchant_oid or not status or not total_amount:
+        return "PAYTR notification failed: missing fields", 400
+    if is_paytr_configured():
+        expected_hash = build_paytr_callback_hash(merchant_oid, status, total_amount)
+        if not hmac.compare_digest(expected_hash, callback_hash):
+            log_payment_error('paytr_callback', 'bad hash', post)
+            db.session.commit()
+            return "PAYTR notification failed: bad hash", 400
+    intent = PaymentIntent.query.filter_by(provider_reference=merchant_oid).first()
+    if not intent:
+        return "OK"
+    if intent.status in {'escrow', 'ready_for_payout', 'paid_out'}:
+        return "OK"
+    if status == 'success':
+        mark_payment_success(intent, total_amount, post)
+    else:
+        mark_payment_failed(intent, post)
+    db.session.commit()
+    return "OK"
+
+@app.route('/payment/success/<int:product_id>')
+def payment_success_page(product_id):
+    return redirect(url_for('index', ilan=product_id, payment='success'))
+
+@app.route('/payment/fail/<int:product_id>')
+def payment_fail_page(product_id):
+    return redirect(url_for('index', ilan=product_id, payment='failed'))
 
 @app.route('/api/product_bids/<int:product_id>', methods=['GET'])
 @login_required
@@ -2265,6 +3012,7 @@ def get_profile():
         "address_detail": repair_turkish_mojibake(current_user.address_detail or ""),
         "address_privacy": current_user.address_privacy or "after_sale",
         "availability": repair_turkish_mojibake(current_user.availability_text or ""),
+        "payout_iban": repair_turkish_mojibake(current_user.payout_iban or ""),
         "phone_verified": bool(moderation and moderation.phone_verified),
         "chat_banned": is_chat_banned(current_user),
         "rating": rating_summary,
@@ -2301,6 +3049,10 @@ def get_profile():
             "created_at": blocked.created_at.strftime('%d.%m.%Y %H:%M')
         } for blocked in blocked_rows],
         "reviews": get_user_reviews(current_user.id, 10),
+        "wallet": get_user_wallet_summary(current_user.id),
+        "payments": get_user_payment_rows(current_user.id, 10),
+        "soldProducts": [serialize_profile_product(product) for product in sorted(completed_products, key=lambda item: item.created_at or datetime.min, reverse=True)],
+        "boughtProducts": [serialize_profile_product(product) for product in sorted(won_products, key=lambda item: item.created_at or datetime.min, reverse=True)],
         "savedSearches": [{
             "id": search.id,
             "name": search.name,
@@ -2331,7 +3083,8 @@ def get_my_orders():
             "status": product.status,
             "statusLabel": get_product_status_label(product.status),
             "createdAt": product.created_at.strftime('%d.%m.%Y'),
-            "saleProgress": serialize_sale_progress(product.id) if product.status == 'completed' else None
+            "saleProgress": serialize_sale_progress(product.id) if product.status == 'completed' else None,
+            "paymentIntent": serialize_payment_intent(product.id) if product.status == 'completed' else None
         } for product in orders]
     })
 
@@ -2374,10 +3127,14 @@ def update_profile_settings():
     data = request.json or {}
     address_privacy = str(data.get('addressPrivacy') or '').strip()
     availability = repair_turkish_mojibake(str(data.get('availability') or '').strip())
+    payout_iban = re.sub(r'\s+', '', repair_turkish_mojibake(str(data.get('payoutIban') or '').strip())).upper()
     if address_privacy not in {'after_sale', 'admin_only'}:
         return jsonify({"success": False, "message": "Adres gizlilik seçimi geçersiz."}), 400
+    if payout_iban and (not payout_iban.startswith('TR') or len(payout_iban) != 26):
+        return jsonify({"success": False, "message": "IBAN TR ile başlamalı ve 26 karakter olmalıdır."}), 400
     current_user.address_privacy = address_privacy
     current_user.availability_text = availability[:200] or None
+    current_user.payout_iban = payout_iban or None
     db.session.commit()
     return jsonify({"success": True, "message": "Ayarlar kaydedildi."})
 
@@ -2537,8 +3294,8 @@ def approve_bid():
     product.status = 'pending_bidder_action'
     create_notification(
         bid.user_id,
-        "Teklifiniz seçildi",
-        f"{product.title} ilanındaki teklifiniz satıcı tarafından seçildi.",
+        "İhaleyi kazandınız",
+        f"{product.title} ilanındaki teklifiniz satıcı tarafından kabul edildi. Devam etmek için onayınız bekleniyor.",
         "bid",
         product.id
     )
@@ -2569,6 +3326,7 @@ def seller_respond():
         if action == 'approve':
             product.status = 'completed'
             get_sale_progress(product.id)
+            get_or_create_payment_intent(product)
             create_notification(
                 product.matched_user_id,
                 "Satış tamamlandı",
@@ -2598,8 +3356,8 @@ def bidder_respond():
         product.status = 'seller_info_confirmation'
         create_notification(
             product.owner_id,
-            "Alıcı devam ediyor",
-            f"{product.title} ilanında alıcı devam etmeyi onayladı.",
+            "Alıcı adres paylaşımını onayladı",
+            f"{product.title} ilanında alıcı devam etmeyi ve adres bilgilerinin paylaşılmasını onayladı.",
             "sale",
             product.id
         )
@@ -2657,6 +3415,7 @@ def index():
         'index.html',
         is_current_admin=can_access_admin_panel(),
         site_settings=settings,
+        paytr_configured=is_paytr_configured(),
         shipping_carriers=SHIPPING_CARRIERS,
         shipping_tracking_urls=SHIPPING_TRACKING_URLS,
         category_data=get_category_menu(),
@@ -2691,6 +3450,7 @@ def admin_panel():
         ).count(),
         "chat_messages": ChatMessage.query.count()
     }
+    finance_summary = get_finance_summary()
     
     # User nesnelerine JSON serileştirme için gerekli alanları ekleyelim (templates/admin.html için)
     users_data = []
@@ -2779,9 +3539,61 @@ def admin_panel():
             "shipping_carrier": progress["shipping_carrier"],
             "tracking_code": progress["tracking_code"],
             "progress": progress,
+            "payment_intent": serialize_payment_intent(product.id),
             "created_at": product.created_at.strftime('%Y-%m-%d %H:%M'),
             "image": product.image_url
         })
+
+    recent_payments = []
+    for intent in PaymentIntent.query.order_by(PaymentIntent.created_at.desc()).limit(30).all():
+        product = Product.query.get(intent.product_id)
+        buyer = User.query.get(intent.buyer_id)
+        seller = User.query.get(intent.seller_id)
+        recent_payments.append({
+            "id": intent.id,
+            "product_id": intent.product_id,
+            "product_title": repair_turkish_mojibake(product.title) if product else "Silinmiş ilan",
+            "buyer_name": buyer.name if buyer else "Silinmiş alıcı",
+            "seller_name": seller.name if seller else "Silinmiş satıcı",
+            "status": intent.status,
+            "status_label": serialize_payment_intent(intent.product_id)["statusLabel"],
+            "buyer_total": intent.buyer_total,
+            "seller_payout": intent.seller_payout_amount,
+            "platform_fee": intent.platform_total_fee,
+            "created_at": intent.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+    payment_transactions = []
+    for transaction in PaymentTransaction.query.order_by(PaymentTransaction.created_at.desc()).limit(30).all():
+        intent = PaymentIntent.query.get(transaction.payment_intent_id)
+        product = Product.query.get(intent.product_id) if intent else None
+        payment_transactions.append({
+            "id": transaction.id,
+            "product_title": repair_turkish_mojibake(product.title) if product else "Silinmiş ödeme",
+            "type": transaction.transaction_type,
+            "status": transaction.status,
+            "amount": transaction.amount,
+            "created_at": transaction.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+    payout_requests = []
+    for payout in SellerPayout.query.filter(SellerPayout.status.in_(['requested', 'ready'])).order_by(SellerPayout.created_at.desc()).limit(30).all():
+        seller = User.query.get(payout.seller_id)
+        intent = PaymentIntent.query.get(payout.payment_intent_id)
+        product = Product.query.get(intent.product_id) if intent else None
+        payout_requests.append({
+            "id": payout.id,
+            "seller_name": seller.name if seller else "Silinmiş satıcı",
+            "seller_iban": repair_turkish_mojibake(seller.payout_iban or "") if seller else "",
+            "product_title": repair_turkish_mojibake(product.title) if product else "Silinmiş ilan",
+            "amount": payout.amount,
+            "status": payout.status,
+            "created_at": payout.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+    payment_errors = [{
+        "id": error.id,
+        "source": error.source,
+        "message": repair_turkish_mojibake(error.message),
+        "created_at": error.created_at.strftime('%Y-%m-%d %H:%M')
+    } for error in PaymentErrorLog.query.order_by(PaymentErrorLog.created_at.desc()).limit(20).all()]
 
     messages_data = []
     for message in ChatMessage.query.order_by(ChatMessage.timestamp.desc()).limit(100).all():
@@ -2973,6 +3785,8 @@ def admin_panel():
             "product_title": repair_turkish_mojibake(product.title) if product else "Silinmiş ilan",
             "user_name": user.name if user else "Silinmiş kullanıcı",
             "status": request_row.status,
+            "payment_status": request_row.payment_status or "pending",
+            "payment_amount": request_row.payment_amount or 0,
             "status_label": {
                 "pending": "Bekliyor",
                 "approved": "Onaylandı",
@@ -2989,6 +3803,16 @@ def admin_panel():
         reports=reports_data,
         products=products_data,
         admin_orders=admin_orders,
+        finance_summary=finance_summary,
+        recent_payments=recent_payments,
+        payment_transactions=payment_transactions,
+        payout_requests=payout_requests,
+        payment_errors=payment_errors,
+        paytr_status={
+            "configured": is_paytr_configured(),
+            "test_mode": os.environ.get('PAYTR_TEST_MODE', '1'),
+            "callback_url": f"{get_public_base_url()}/paytr/callback"
+        },
         messages=messages_data,
         category_stats=category_stats,
         daily_stats=daily_stats,
@@ -3297,6 +4121,83 @@ def update_admin_order(product_id):
     db.session.commit()
     return jsonify({"success": True, "sale_progress": serialize_sale_progress(product.id), "status": product.status})
 
+@app.route('/api/admin/payouts/<int:payout_id>', methods=['POST'])
+@login_required
+def admin_update_payout(payout_id):
+    if not is_admin_user():
+        return jsonify({"success": False}), 403
+    payout = SellerPayout.query.get(payout_id)
+    if not payout:
+        return jsonify({"success": False, "message": "Ödeme talebi bulunamadı."}), 404
+    data = request.json or {}
+    action = data.get('action')
+    intent = PaymentIntent.query.get(payout.payment_intent_id)
+    if action == 'approve':
+        payout.status = 'paid'
+        payout.paid_at = datetime.utcnow()
+        if intent:
+            intent.status = 'paid_out'
+            db.session.add(PaymentTransaction(payment_intent_id=intent.id, provider='manual', transaction_type='seller_payout', status='paid', amount=payout.amount, raw_payload=json.dumps({"admin_id": current_user.id}, ensure_ascii=False)))
+        create_notification(payout.seller_id, "Ödeme aktarıldı", f"{payout.amount} TL satıcı ödemeniz aktarıldı olarak işaretlendi.", "payment")
+        log_admin_action("Satıcı ödemesi onaylandı", "payout", payout.id, str(payout.amount))
+    elif action == 'reject':
+        payout.status = 'ready'
+        create_notification(payout.seller_id, "Ödeme talebi reddedildi", "Satıcı ödeme talebiniz admin tarafından tekrar beklemeye alındı.", "payment")
+        log_admin_action("Satıcı ödeme talebi reddedildi", "payout", payout.id, str(payout.amount))
+    else:
+        return jsonify({"success": False, "message": "Geçersiz işlem."}), 400
+    db.session.commit()
+    return jsonify({"success": True, "status": payout.status})
+
+@app.route('/api/admin/sale_dispute/<int:report_id>', methods=['POST'])
+@login_required
+def admin_sale_dispute(report_id):
+    if not is_admin_user():
+        return jsonify({"success": False}), 403
+    report = Report.query.get(report_id)
+    if not report or report.target_type != 'sale' or not report.product_id:
+        return jsonify({"success": False, "message": "Satış itirazı bulunamadı."}), 404
+    data = request.json or {}
+    decision = data.get('decision')
+    product = Product.query.get(report.product_id)
+    intent = PaymentIntent.query.filter_by(product_id=report.product_id).first()
+    if not product or not intent:
+        return jsonify({"success": False, "message": "Ödeme kaydı bulunamadı."}), 404
+    amount = intent.buyer_total
+    if decision == 'refund':
+        intent.status = 'refunded'
+        tx_status = 'refund'
+    elif decision == 'release':
+        intent.status = 'ready_for_payout'
+        tx_status = 'release'
+    elif decision == 'partial_refund':
+        try:
+            amount = int(data.get('amount') or 0)
+        except (TypeError, ValueError):
+            amount = 0
+        if amount <= 0 or amount >= intent.buyer_total:
+            return jsonify({"success": False, "message": "Geçerli bir kısmi iade tutarı girin."}), 400
+        intent.status = 'ready_for_payout'
+        intent.seller_payout_amount = max(0, intent.seller_payout_amount - amount)
+        tx_status = 'partial_refund'
+    else:
+        return jsonify({"success": False, "message": "Geçersiz karar."}), 400
+    payout = SellerPayout.query.filter_by(payment_intent_id=intent.id).first()
+    if payout and decision != 'refund':
+        payout.amount = intent.seller_payout_amount
+        payout.status = 'ready'
+        payout.available_at = datetime.utcnow()
+    if payout and decision == 'refund':
+        payout.status = 'cancelled'
+        payout.amount = 0
+    db.session.add(PaymentTransaction(payment_intent_id=intent.id, provider='manual', transaction_type='dispute', status=tx_status, amount=amount, raw_payload=json.dumps({"report_id": report.id, "decision": decision, "admin_id": current_user.id}, ensure_ascii=False)))
+    report.status = 'resolved'
+    create_notification(intent.buyer_id, "Satış itirazı sonuçlandı", f"{product.title} itirazı için admin kararı: {tx_status}.", "payment", product.id)
+    create_notification(intent.seller_id, "Satış itirazı sonuçlandı", f"{product.title} itirazı için admin kararı: {tx_status}.", "payment", product.id)
+    log_admin_action("Satış itirazı sonuçlandı", "report", report.id, decision)
+    db.session.commit()
+    return jsonify({"success": True, "decision": decision, "paymentIntent": serialize_payment_intent(product.id)})
+
 @app.route('/api/admin/featured_requests/<int:request_id>', methods=['POST'])
 @login_required
 def resolve_featured_request(request_id):
@@ -3322,6 +4223,7 @@ def resolve_featured_request(request_id):
         else:
             featured.is_active = True
         featured_request.status = 'approved'
+        featured_request.payment_status = featured_request.payment_status or 'pending'
         featured_request.admin_response = repair_turkish_mojibake(str(data.get('message') or 'Öne çıkarma talebiniz onaylandı.').strip())[:300]
         create_notification(
             featured_request.user_id,
@@ -3333,6 +4235,7 @@ def resolve_featured_request(request_id):
         log_admin_action("Öne çıkarma talebi onaylandı", "featured_request", featured_request.id, product.title)
     else:
         featured_request.status = 'rejected'
+        featured_request.payment_status = 'cancelled'
         featured_request.admin_response = repair_turkish_mojibake(str(data.get('message') or 'Öne çıkarma talebiniz reddedildi.').strip())[:300]
         create_notification(
             featured_request.user_id,
@@ -3409,7 +4312,11 @@ def update_admin_settings():
         "chat_spam_seconds": (1, 120),
         "default_duration_days": (1, 180),
         "max_images": (1, 5),
-        "featured_price": (0, 1000000)
+        "featured_price": (0, 1000000),
+        "payment_service_fee_fixed": (0, 1000000),
+        "payment_service_fee_percent": (0, 100),
+        "platform_commission_percent": (0, 100),
+        "buyer_auto_confirm_days": (1, 14)
     }
     for key, (minimum, maximum) in limits.items():
         try:
@@ -3422,11 +4329,23 @@ def update_admin_settings():
             return jsonify({"success": False, "message": "Varsayılan ilan süresi 1 gün, 7 gün, 1 ay, 3 ay veya 6 ay olmalıdır."}), 400
         update_site_setting(key, value)
     update_site_setting("maintenance_mode", "1" if data.get("maintenance_mode") else "0")
+    raw_shipping_rates = str(data.get("secure_shipping_rates") or '').strip()
+    if raw_shipping_rates:
+        try:
+            json.loads(raw_shipping_rates)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Kargo desi fiyatları geçerli JSON olmalıdır."}), 400
+    parsed_shipping_rates = parse_secure_shipping_rates(raw_shipping_rates)
+    if not parsed_shipping_rates:
+        return jsonify({"success": False, "message": "En az bir desi fiyatı girmelisiniz."}), 400
+    update_site_setting("secure_shipping_carrier", repair_turkish_mojibake(str(data.get("secure_shipping_carrier") or '').strip())[:80] or DEFAULT_SITE_SETTINGS["secure_shipping_carrier"])
+    update_site_setting("secure_shipping_rates", json.dumps(parsed_shipping_rates, ensure_ascii=False))
     for key, max_length in {
         "support_phone": 80,
         "support_email": 120,
         "support_instagram": 120,
-        "kvkk_text": 5000
+        "kvkk_text": 5000,
+        "sales_terms_text": 5000
     }.items():
         value = repair_turkish_mojibake(str(data.get(key) or '').strip())[:max_length]
         update_site_setting(key, value)
@@ -3695,7 +4614,15 @@ def request_product_featured(product_id):
     if existing_request:
         return jsonify({"success": False, "message": "Bu ilan için bekleyen öne çıkarma talebiniz var."}), 400
 
-    db.session.add(FeaturedRequest(product_id=product.id, user_id=current_user.id))
+    settings = get_site_settings()
+    featured_amount = settings["featured_price"]
+    db.session.add(FeaturedRequest(
+        product_id=product.id,
+        user_id=current_user.id,
+        payment_status='pending',
+        payment_amount=featured_amount,
+        paytr_amount_kurus=featured_amount * 100
+    ))
 
     admin_users = [user for user in User.query.filter_by(role='admin').all() if is_admin_user(user)]
     for admin in admin_users:
@@ -3742,6 +4669,21 @@ def edit_product(product_id):
     if 'exchangeOpen' in data:
         extra = get_product_extra(product.id)
         extra.exchange_open = bool(data.get('exchangeOpen'))
+    if 'securePurchase' in data:
+        extra = get_product_extra(product.id)
+        secure_purchase = bool(data.get('securePurchase'))
+        shipping_payer = str(data.get('shippingPayer') or (extra.shipping_payer if not secure_purchase else '') or 'buyer').strip()
+        if shipping_payer not in {'buyer', 'seller'}:
+            return jsonify({"success": False, "message": "Kargoyu kimin ödeyeceğini seçmelisiniz."}), 400
+        try:
+            shipping_desi = int(data.get('shippingDesi') or 0)
+        except (TypeError, ValueError):
+            shipping_desi = 0
+        if secure_purchase and shipping_desi < 1:
+            return jsonify({"success": False, "message": "Kargo desisini seçmelisiniz."}), 400
+        extra.secure_purchase_enabled = secure_purchase
+        extra.shipping_payer = shipping_payer
+        extra.shipping_desi = shipping_desi if secure_purchase else None
     if 'images' in data:
         images = data.get('images')
         if not isinstance(images, list):
@@ -3885,6 +4827,8 @@ def register():
 
     if not data.get('kvkkAccepted'):
         return jsonify({"success": False, "message": "KVKK aydınlatma metnini onaylamalısınız."}), 400
+    if not data.get('salesTermsAccepted'):
+        return jsonify({"success": False, "message": "Satış ve ödeme şartlarını onaylamalısınız."}), 400
 
     # E-posta format kontrolü
     if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
@@ -3956,6 +4900,12 @@ def add_product():
     duration_days = duration_days if duration_days in {1, 7, 30, 90, 180} else settings["default_duration_days"]
     title = str(data.get('title', '')).strip()
     condition = str(data.get('condition', '')).strip()
+    secure_purchase = bool(data.get('securePurchase'))
+    shipping_payer = str(data.get('shippingPayer') or ('' if secure_purchase else 'buyer')).strip()
+    try:
+        shipping_desi = int(data.get('shippingDesi') or 0)
+    except (TypeError, ValueError):
+        shipping_desi = 0
     imgs = data.get('images', [])
 
     if not title or title.endswith('|'):
@@ -3968,6 +4918,10 @@ def add_product():
 
     if condition not in allowed_conditions:
         return jsonify({"success": False, "message": "Ürün durumunu seçmelisiniz."}), 400
+    if shipping_payer not in {'buyer', 'seller'}:
+        return jsonify({"success": False, "message": "Kargoyu kimin ödeyeceğini seçmelisiniz."}), 400
+    if secure_purchase and shipping_desi < 1:
+        return jsonify({"success": False, "message": "Kargo desisini seçmelisiniz."}), 400
 
     try:
         start_price = int(data.get('startPrice'))
@@ -4004,6 +4958,9 @@ def add_product():
     extra = get_product_extra(new_p.id)
     extra.condition = condition
     extra.exchange_open = bool(data.get('exchangeOpen'))
+    extra.secure_purchase_enabled = secure_purchase
+    extra.shipping_payer = shipping_payer
+    extra.shipping_desi = shipping_desi if secure_purchase else None
     moderation = get_product_moderation(new_p.id)
     moderation.is_hidden = True
     moderation.reason = "Admin onayı bekliyor."

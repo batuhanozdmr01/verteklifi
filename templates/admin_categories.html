@@ -10,17 +10,83 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        html, body { max-width: 100%; overflow-x: hidden; }
+        @media (max-width: 640px) {
+            .category-topbar {
+                align-items: stretch;
+                gap: 0.75rem;
+                padding: 0.75rem;
+            }
+            .category-topbar h1 {
+                font-size: 1rem;
+                line-height: 1.1;
+            }
+            .category-topbar-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.5rem;
+                width: 100%;
+            }
+            .category-topbar-actions > * {
+                justify-content: center;
+                width: 100%;
+                min-width: 0;
+                white-space: nowrap;
+            }
+            .category-page {
+                padding: 0.75rem;
+            }
+            .category-page .p-6 {
+                padding: 1rem;
+            }
+            .category-page .p-5,
+            .category-page .p-4 {
+                padding: 0.9rem;
+            }
+            .category-page .gap-6 {
+                gap: 1rem;
+            }
+            .category-page h2 {
+                font-size: 1.25rem;
+                line-height: 1.25;
+            }
+            .category-page h3 {
+                font-size: 1rem;
+                line-height: 1.25;
+            }
+            .category-page input,
+            .category-page button {
+                min-height: 2.65rem;
+            }
+            .category-nav-panel {
+                position: static;
+                max-height: none;
+            }
+            #categoryMenuNav {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                max-height: 14rem;
+                gap: 0.5rem;
+            }
+            #categoryMenuNav > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 0;
+            }
+            #categoryMenuEditor {
+                max-height: none;
+                overflow: visible;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <nav class="bg-indigo-900 text-white p-4 shadow-xl flex justify-between items-center sticky top-0 z-50">
+    <nav class="category-topbar bg-indigo-900 text-white p-4 shadow-xl flex flex-col sm:flex-row sm:justify-between sm:items-center sticky top-0 z-50">
         <div class="flex items-center space-x-3">
             <div class="bg-white p-2 rounded-lg">
                 <i class="fa-solid fa-sitemap text-indigo-900 text-xl"></i>
             </div>
             <h1 class="text-xl font-black tracking-tighter">MENÜ <span class="text-indigo-300 font-light">KATEGORİLER</span></h1>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="category-topbar-actions flex items-center gap-3">
             <a href="/admin" class="bg-indigo-700 text-white hover:bg-indigo-600 px-4 py-2 rounded-lg font-bold text-sm transition flex items-center">
                 <i class="fa-solid fa-gauge-high mr-2"></i>Admin Paneli
             </a>
@@ -30,7 +96,7 @@
         </div>
     </nav>
 
-    <main class="container mx-auto p-6 space-y-6">
+    <main class="category-page container mx-auto p-6 space-y-6">
         <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                 <div>
@@ -57,7 +123,7 @@
         </section>
 
         <section class="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6">
-            <aside class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit sticky top-24">
+            <aside class="category-nav-panel bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit sticky top-24">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-sm font-black text-gray-800">Kategori Listesi</h3>
                     <button onclick="resetCategoryMenu()" class="text-[10px] font-black text-gray-500 hover:text-red-600">Varsayılana dön</button>
