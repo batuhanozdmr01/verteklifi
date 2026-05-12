@@ -632,11 +632,11 @@
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                 <h2 class="text-xl font-black text-gray-800 flex items-center mb-4"><i class="fa-solid fa-broom mr-3 text-teal-600"></i>Veri Temizlik Paneli</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button onclick="runDataCleanup('notifications')" class="text-left bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-teal-700">{{ cleanup_summary.oldNotifications }}</p><p class="text-[10px] font-black text-teal-800 uppercase">Eski okunmuş bildirim</p></button>
-                    <button onclick="runDataCleanup('logs')" class="text-left bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-gray-700">{{ cleanup_summary.oldAdminLogs }}</p><p class="text-[10px] font-black text-gray-700 uppercase">90+ gün admin logu</p></button>
-                    <button onclick="runDataCleanup('payment_errors')" class="text-left bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-red-700">{{ cleanup_summary.oldPaymentErrors }}</p><p class="text-[10px] font-black text-red-700 uppercase">Eski ödeme hatası</p></button>
-                    <button onclick="runDataCleanup('orphan_uploads')" class="text-left bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-orange-700">{{ cleanup_summary.orphanUploads }}</p><p class="text-[10px] font-black text-orange-700 uppercase">Sahipsiz görsel</p></button>
-                    <button onclick="runDataCleanup('backups')" class="sm:col-span-2 text-left bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-indigo-700">{{ cleanup_summary.oldBackups }}</p><p class="text-[10px] font-black text-indigo-700 uppercase">Süresi dolan yedek</p></button>
+                    <button onclick="runDataCleanup('notifications')" class="text-left bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-2xl p-4 transition"><p id="cleanup-count-notifications" class="text-2xl font-black text-teal-700">{{ cleanup_summary.oldNotifications }}</p><p class="text-[10px] font-black text-teal-800 uppercase">Eski okunmuş bildirim</p></button>
+                    <button onclick="runDataCleanup('logs')" class="text-left bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-2xl p-4 transition"><p id="cleanup-count-logs" class="text-2xl font-black text-gray-700">{{ cleanup_summary.oldAdminLogs }}</p><p class="text-[10px] font-black text-gray-700 uppercase">Admin işlem kaydı</p></button>
+                    <button onclick="runDataCleanup('payment_errors')" class="text-left bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl p-4 transition"><p id="cleanup-count-payment-errors" class="text-2xl font-black text-red-700">{{ cleanup_summary.oldPaymentErrors }}</p><p class="text-[10px] font-black text-red-700 uppercase">Eski ödeme hatası</p></button>
+                    <button onclick="runDataCleanup('orphan_uploads')" class="text-left bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl p-4 transition"><p id="cleanup-count-orphan-uploads" class="text-2xl font-black text-orange-700">{{ cleanup_summary.orphanUploads }}</p><p class="text-[10px] font-black text-orange-700 uppercase">Sahipsiz görsel</p></button>
+                    <button onclick="runDataCleanup('backups')" class="sm:col-span-2 text-left bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-2xl p-4 transition"><p id="cleanup-count-backups" class="text-2xl font-black text-indigo-700">{{ cleanup_summary.oldBackups }}</p><p class="text-[10px] font-black text-indigo-700 uppercase">Süresi dolan yedek</p></button>
                 </div>
                 <p id="data-cleanup-result" class="hidden mt-3 text-[11px] font-black"></p>
             </div>
@@ -716,22 +716,6 @@
                     <p class="text-[10px] font-bold text-indigo-800 mt-1">Kategori sırası ve içerikler.</p>
                 </a>
             </div>
-            {% if can_admin_settings %}
-            <div class="mt-4 rounded-2xl border border-purple-100 bg-purple-50 p-4">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                    <div>
-                        <p class="text-sm font-black text-purple-900"><i class="fa-solid fa-vial-circle-check mr-2"></i>Admin Deneme Modu</p>
-                        <p class="text-[11px] font-bold text-purple-700 mt-1">PayTR, güvenli satış, kargo ve sipariş takibini gerçek kullanıcılara dokunmadan test eder.</p>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
-                        <button onclick="runAdminDemo('create')" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-2 rounded-xl text-[10px] font-black">Demo Satış Oluştur</button>
-                        <button onclick="runAdminDemo('pay')" class="bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-xl text-[10px] font-black">Demo Ödeme Al</button>
-                        <button onclick="runAdminDemo('ship')" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-xl text-[10px] font-black">Demo Kargo Gir</button>
-                    </div>
-                </div>
-                <p id="admin-demo-result" class="hidden mt-3 text-[11px] font-black"></p>
-            </div>
-            {% endif %}
         </div>
 
         {% if can_admin_settings %}
@@ -1614,7 +1598,7 @@
             <div id="adminLogsList" class="p-4 space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
                 {% if logs %}
                     {% for log in logs %}
-                    <div data-log-row data-log-role="{{ log.admin_role }}" data-log-target="{{ log.target_type or '' }}" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                    <div id="admin-log-row-{{ log.id }}" data-log-row data-log-role="{{ log.admin_role }}" data-log-target="{{ log.target_type or '' }}" class="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
                         <div>
                             <div class="flex flex-wrap items-center gap-2 mb-1">
                                 <span class="text-[9px] font-black uppercase px-2 py-1 rounded-full {% if log.admin_role == 'moderator' %}bg-indigo-100 text-indigo-700{% elif log.admin_role == 'admin' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">{{ log.admin_role }}</span>
@@ -2917,7 +2901,7 @@
         async function runDataCleanup(action) {
             const labels = {
                 notifications: 'eski okunmuş bildirimleri',
-                logs: 'eski admin loglarını',
+                logs: 'admin işlem kayıtlarını',
                 payment_errors: 'eski ödeme hata kayıtlarını',
                 orphan_uploads: 'sahipsiz görselleri',
                 backups: 'süresi dolan yedekleri'
@@ -2937,6 +2921,27 @@
             if (resultBox) {
                 resultBox.className = `mt-3 text-[11px] font-black ${result.success ? 'text-green-700' : 'text-red-700'}`;
                 resultBox.textContent = result.success ? `${result.deleted} kayıt/dosya temizlendi.` : (result.message || 'Temizlik yapılamadı.');
+            }
+            if (result.success && result.summary) {
+                const summaryMap = {
+                    'cleanup-count-notifications': result.summary.oldNotifications,
+                    'cleanup-count-logs': result.summary.oldAdminLogs,
+                    'cleanup-count-payment-errors': result.summary.oldPaymentErrors,
+                    'cleanup-count-orphan-uploads': result.summary.orphanUploads,
+                    'cleanup-count-backups': result.summary.oldBackups
+                };
+                Object.entries(summaryMap).forEach(([id, value]) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = Number(value || 0).toLocaleString('tr-TR');
+                });
+                if (action === 'logs') {
+                    document.querySelectorAll('#adminLogsList > [id^="admin-log-row-"]').forEach(row => row.remove());
+                    const empty = document.getElementById('adminLogEmpty');
+                    if (empty) {
+                        empty.classList.remove('hidden');
+                        empty.textContent = 'Admin işlem kaydı yok.';
+                    }
+                }
             }
             showAdminNotice(result.success ? `${result.deleted} kayıt/dosya temizlendi.` : (result.message || 'Temizlik yapılamadı.'), result.success ? 'success' : 'error');
         }

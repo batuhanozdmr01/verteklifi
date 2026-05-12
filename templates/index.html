@@ -933,6 +933,122 @@
             }
         }
 
+        function setSelectValueOrAppend(select, value) {
+            if (!select || !value) return;
+            const existing = Array.from(select.options).find(option => option.value === value);
+            if (!existing) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            }
+            select.value = value;
+        }
+
+        function ensureProfileNeighborhoodInput(value = '') {
+            const current = document.getElementById('profile-neighborhood');
+            if (!current) return null;
+            if (current.tagName === 'INPUT') {
+                current.value = value || current.value;
+                current.disabled = false;
+                return current;
+            }
+            current.outerHTML = `<input id="profile-neighborhood" value="${escapeHtml(value || '')}" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500" placeholder="Mahalle">`;
+            return document.getElementById('profile-neighborhood');
+        }
+
+        function ensureProfileNeighborhoodSelect() {
+            const current = document.getElementById('profile-neighborhood');
+            if (!current) return null;
+            if (current.tagName === 'SELECT') return current;
+            current.outerHTML = `<select id="profile-neighborhood" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500 bg-white" disabled>
+                <option value="">Mahalle Seçiniz</option>
+            </select>`;
+            return document.getElementById('profile-neighborhood');
+        }
+
+        async function initProfileAddressFields(user) {
+            const citySelect = document.getElementById('profile-city');
+            if (!citySelect) return;
+            citySelect.disabled = true;
+            try {
+                if (!addressState.cities.length) {
+                    addressState.cities = await fetchAddressItems('/api/address/cities');
+                    addressState.source = 'internet';
+                }
+            } catch (error) {
+                addressState.cities = fallbackCities();
+                addressState.source = 'fallback';
+            }
+            setSelectOptions(citySelect, addressState.cities, 'İl Seçiniz');
+            setSelectValueOrAppend(citySelect, user.city || '');
+            citySelect.disabled = false;
+            await updateProfileDistricts(user.district || '', user.neighborhood || '');
+        }
+
+        async function updateProfileDistricts(selectedDistrict = '', selectedNeighborhood = '') {
+            const citySelect = document.getElementById('profile-city');
+            const districtSelect = document.getElementById('profile-district');
+            const city = citySelect?.value || '';
+            const cityCode = citySelect?.selectedOptions?.[0]?.dataset?.code || '';
+            if (!districtSelect) return;
+            setSelectOptions(districtSelect, [], 'İlçe Seçiniz');
+            districtSelect.disabled = true;
+            const neighborhoodSelect = ensureProfileNeighborhoodSelect();
+            if (neighborhoodSelect) {
+                setSelectOptions(neighborhoodSelect, [], 'Mahalle Seçiniz');
+                neighborhoodSelect.disabled = true;
+            }
+            if (!city) return;
+
+            if (addressState.source === 'internet' && cityCode) {
+                districtSelect.innerHTML = '<option value="">İlçeler yükleniyor...</option>';
+                try {
+                    if (!addressState.districts.has(cityCode)) {
+                        addressState.districts.set(cityCode, await fetchAddressItems(`/api/address/districts?city_code=${encodeURIComponent(cityCode)}`));
+                    }
+                    setSelectOptions(districtSelect, addressState.districts.get(cityCode), 'İlçe Seçiniz');
+                    setSelectValueOrAppend(districtSelect, selectedDistrict);
+                    districtSelect.disabled = false;
+                    await updateProfileNeighborhoods(selectedNeighborhood);
+                    return;
+                } catch (error) {
+                    addressState.source = 'fallback';
+                }
+            }
+
+            const fallbackDistricts = (turkeyData[city] || []).slice().sort((a, b) => a.localeCompare(b, 'tr')).map(district => ({ name: district, code: '' }));
+            setSelectOptions(districtSelect, fallbackDistricts, 'İlçe Seçiniz');
+            setSelectValueOrAppend(districtSelect, selectedDistrict);
+            districtSelect.disabled = fallbackDistricts.length === 0;
+            ensureProfileNeighborhoodInput(selectedNeighborhood);
+        }
+
+        async function updateProfileNeighborhoods(selectedNeighborhood = '') {
+            const districtSelect = document.getElementById('profile-district');
+            const districtCode = districtSelect?.selectedOptions?.[0]?.dataset?.code || '';
+            const neighborhoodSelect = ensureProfileNeighborhoodSelect();
+            if (!neighborhoodSelect) return;
+            setSelectOptions(neighborhoodSelect, [], 'Mahalle Seçiniz');
+            neighborhoodSelect.disabled = true;
+            if (!districtSelect?.value) return;
+            if (!districtCode || addressState.source !== 'internet') {
+                ensureProfileNeighborhoodInput(selectedNeighborhood);
+                return;
+            }
+            neighborhoodSelect.innerHTML = '<option value="">Mahalleler yükleniyor...</option>';
+            try {
+                if (!addressState.neighborhoods.has(districtCode)) {
+                    addressState.neighborhoods.set(districtCode, await fetchAddressItems(`/api/address/neighborhoods?district_code=${encodeURIComponent(districtCode)}`));
+                }
+                setSelectOptions(neighborhoodSelect, addressState.neighborhoods.get(districtCode), 'Mahalle Seçiniz');
+                setSelectValueOrAppend(neighborhoodSelect, selectedNeighborhood);
+                neighborhoodSelect.disabled = false;
+            } catch (error) {
+                ensureProfileNeighborhoodInput(selectedNeighborhood);
+            }
+        }
+
         const fallbackCategoryData = {
             "Telefon": [
                 { name: "Apple", maxPrice: 150000, icon: "fa-mobile-alt" }, 
@@ -1719,7 +1835,7 @@
                 container.insertAdjacentHTML('beforeend', `
                     <div onclick="showDetails(${p.id})" class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100 overflow-hidden cursor-pointer relative group">
                         ${statusBadge}
-                        ${p.isFeatured ? `<div class="absolute top-20 left-2 z-10 bg-indigo-900 text-white px-2 py-1 rounded-lg text-[9px] font-black shadow"><i class="fa-solid fa-star mr-1"></i>Öne çıkan${p.featuredStatus?.remainingText && currentUserId === p.owner_id ? ` · ${escapeHtml(p.featuredStatus.remainingText)}` : ''}</div>` : ''}
+                        ${p.isFeatured ? `<div class="absolute top-20 left-2 z-10 bg-indigo-900 text-white px-2 py-1 rounded-lg text-[9px] font-black shadow"><i class="fa-solid fa-star mr-1"></i>Öne çıkan</div>` : ''}
                         ${appState.isAuthenticated ? `<button onclick="toggleFavorite(event, ${p.id})" class="absolute top-8 right-2 z-20 ${p.isFavorite ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-500'} hover:bg-red-500 hover:text-white w-8 h-8 rounded-full shadow transition" title="Favori"><i class="fa-solid fa-heart text-xs"></i></button>` : ''}
                         <div class="absolute top-2 left-2 z-10 bg-black/70 text-white px-2 py-1 rounded-lg text-[10px] font-bold">
                             <span class="timer-display" data-id="${p.id}" data-endtime="${p.endTime}">
@@ -1915,13 +2031,24 @@
                             ${featureRequest.paymentStatus !== 'paid' && featureRequest.status !== 'rejected' ? `<button onclick="startFeaturedPayment(${featureRequest.id})" class="mt-3 w-full bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-credit-card mr-2"></i>Ödemeyi Yap</button>${!appState.paytrConfigured ? `<button onclick="completeMockFeaturedPayment(${featureRequest.id}, ${p.id})" class="mt-2 w-full bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-vial mr-2"></i>Test Ödemeyi Tamamla</button>` : ''}` : ''}
                         </div>
                     ` : `
-                        <div class="mb-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
-                            <p class="text-sm font-black text-indigo-900">İlanınızı öne çıkarmak ister misiniz?</p>
-                            <p class="text-[11px] font-bold text-indigo-700 mt-1">Paket seç, ödeme/onay akışı admin paneline düşsün.</p>
-                            <select id="featured-package-${p.id}" class="mt-3 w-full bg-white border border-indigo-100 rounded-xl px-3 py-2 text-xs font-black text-indigo-900">
-                                ${renderFeaturedPackageOptions()}
-                            </select>
-                            <button onclick="requestProductFeatured(${p.id})" class="mt-3 bg-indigo-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-star mr-2"></i>Paketi Seç ve İstek Gönder</button>
+                        <div class="mb-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                            <div class="text-center">
+                                <p class="text-sm font-black text-indigo-900"><i class="fa-solid fa-star mr-2"></i>İlanınızı öne çıkarmak ister misiniz?</p>
+                                <p class="text-[11px] font-bold text-indigo-700 mt-1">Paket seç, ödeme/onay akışı admin paneline düşsün.</p>
+                            </div>
+                            <input id="featured-package-${p.id}" type="hidden" value="${getDefaultFeaturedPackageDays()}">
+                            <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                ${renderFeaturedPackageCards(p.id)}
+                            </div>
+                            <div class="mt-3 rounded-xl bg-white/80 border border-indigo-100 p-3 text-left">
+                                <p class="text-[10px] font-black text-indigo-900 uppercase">Paket avantajları</p>
+                                <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-bold text-indigo-700">
+                                    <span><i class="fa-solid fa-arrow-up mr-1"></i>Ana sayfada üst sıralar</span>
+                                    <span><i class="fa-solid fa-eye mr-1"></i>Daha fazla görünürlük</span>
+                                    <span><i class="fa-solid fa-bell mr-1"></i>Admin onay/ödeme takibi</span>
+                                </div>
+                            </div>
+                            <button onclick="requestProductFeatured(${p.id})" class="mt-3 w-full bg-indigo-900 hover:bg-black text-white px-4 py-3 rounded-xl text-xs font-black transition"><i class="fa-solid fa-star mr-2"></i>Seçili Paketi İste</button>
                         </div>
                     `;
                     actionArea = featurePrompt + `<div class="bg-orange-50 p-4 rounded-xl border border-orange-200 text-center"><p class="text-xs font-bold text-orange-800">Kendi ilanınız. Teklifleri aşağıdan yönetin.</p></div>` + bidsHtml;
@@ -2187,7 +2314,7 @@
                             ${p.exchangeOpen ? '<span class="bg-orange-50 text-orange-700 border border-orange-100 px-3 py-1 rounded-full text-[10px] font-black lowercase">Takasa açık</span>' : ''}
                             ${p.securePurchase ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-circle-check mr-1"></i>Güvenli alışveriş</span>` : ''}
                             ${p.securePurchase ? `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(p.secureShippingCarrier || 'Anlaşmalı kargo')} · ${escapeHtml(p.shippingPayerLabel || getShippingPayerLabel(p.shippingPayer))}${p.shippingDesi ? ` · ${escapeHtml(String(p.shippingDesi))} desi` : ''}${p.secureShippingFee ? ` · ${formatTl(p.secureShippingFee)}` : ''}</span>` : ''}
-                            ${p.isFeatured ? `<span class="bg-indigo-900 text-white px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-star mr-1"></i>Öne çıkan${p.featuredStatus?.remainingText && currentUserId === p.owner_id ? ` · ${escapeHtml(p.featuredStatus.remainingText)}` : ''}</span>` : ''}
+                            ${p.isFeatured ? `<span class="bg-indigo-900 text-white px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-star mr-1"></i>Öne çıkan</span>` : ''}
                             ${p.owner_trust ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-shield-halved mr-1"></i>Güven: ${escapeHtml(p.owner_trust.label)}</span>` : ''}
                             <span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.location || 'Konum yok')}</span>
                             ${appState.isAuthenticated ? `<button onclick="toggleFavorite(event, ${p.id})" class="${p.isFavorite ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'} px-3 py-1 rounded-full text-[10px] font-black hover:bg-red-500 hover:text-white transition"><i class="fa-solid fa-heart mr-1"></i>${p.isFavorite ? 'Favoride' : 'Favori'}</button>` : ''}
@@ -3569,11 +3696,12 @@
             const trust = profile.user.trust || { label: 'Yeni / düşük veri', score: 0, positive: [], warnings: [] };
             const blockedUsers = profile.blockedUsers || [];
             content.innerHTML = `
-                <div class="mobile-profile-tabs hidden grid-cols-4 gap-2 mb-4">
+                <div class="mobile-profile-tabs hidden grid-cols-5 gap-2 mb-4">
                     <button onclick="scrollProfileSection('profile-overview')" class="bg-orange-50 text-orange-700 rounded-xl px-2 py-2 text-[10px] font-black">Bilgiler</button>
                     <button onclick="scrollProfileSection('profile-trades')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Al/Sat</button>
                     <button onclick="scrollProfileSection('profile-favorites')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Favoriler</button>
                     <button onclick="scrollProfileSection('profile-settings')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Ayarlar</button>
+                    <button onclick="scrollProfileSection('profile-security')" class="bg-gray-100 text-gray-700 rounded-xl px-2 py-2 text-[10px] font-black">Güvenlik</button>
                 </div>
                 <div id="profile-overview">
                 <div class="grid grid-cols-1 md:grid-cols-[minmax(280px,1fr)_2fr] gap-4 mb-6">
@@ -3724,12 +3852,38 @@
                 <div id="profile-settings" class="mt-6 bg-gray-50 border border-gray-100 rounded-2xl p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
-                            <p class="text-sm font-black text-gray-700">Ayarlar</p>
-                            <p class="text-[11px] font-bold text-gray-400 mt-1">Şifre, adres gizliliği ve uygunluk bilgisi.</p>
+                            <p class="text-sm font-black text-gray-700">Profil Ayarları</p>
+                            <p class="text-[11px] font-bold text-gray-400 mt-1">Ad soyad, adres, adres gizliliği ve ödeme bilgisi.</p>
                         </div>
                         <i class="fa-solid fa-gear text-gray-300 text-xl"></i>
                     </div>
                     <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label class="block sm:col-span-2">
+                            <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">Ad Soyad</span>
+                            <input id="profile-name-input" value="${escapeHtml(profile.user.name || '')}" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500" placeholder="Ad Soyad">
+                        </label>
+                        <label class="block">
+                            <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">İl</span>
+                            <select id="profile-city" onchange="updateProfileDistricts()" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500 bg-white">
+                                <option value="">İl Seçiniz</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">İlçe</span>
+                            <select id="profile-district" onchange="updateProfileNeighborhoods()" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500 bg-white" disabled>
+                                <option value="">İlçe Seçiniz</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">Mahalle</span>
+                            <select id="profile-neighborhood" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500 bg-white" disabled>
+                                <option value="">Mahalle Seçiniz</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">Detay Adres</span>
+                            <input id="profile-address-detail" value="${escapeHtml(profile.user.address_detail || '')}" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500" placeholder="Sokak, bina/no, kat, daire">
+                        </label>
                         <label class="block">
                             <span class="block text-[10px] font-black text-gray-400 uppercase mb-1">Detay adres görünürlüğü</span>
                             <select id="profile-address-privacy" class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-orange-500">
@@ -3750,6 +3904,15 @@
                         <i class="fa-solid fa-floppy-disk mr-2"></i>Ayarları Kaydet
                     </button>
                     <p id="profile-settings-message" class="hidden mb-3 text-[11px] font-bold"></p>
+                </div>
+                <div id="profile-security" class="mt-6 bg-orange-50 border border-orange-100 rounded-2xl p-4">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <p class="text-sm font-black text-orange-900">Güvenlik</p>
+                            <p class="text-[11px] font-bold text-orange-700 mt-1">Şifre değişikliği buradan yapılır.</p>
+                        </div>
+                        <i class="fa-solid fa-shield-halved text-orange-300 text-xl"></i>
+                    </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div class="relative">
                             <input id="profile-new-password" type="password" autocomplete="new-password" class="w-full border border-gray-200 rounded-xl p-3 pr-12 text-sm outline-none focus:border-orange-500" placeholder="Yeni şifre">
@@ -3813,6 +3976,7 @@
                     <i class="fa-solid fa-right-from-bracket"></i>Çıkış Yap
                 </a>
             `;
+            initProfileAddressFields(profile.user);
         }
 
         function renderProfileTradeItem(item, type) {
@@ -4046,6 +4210,11 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    name: document.getElementById('profile-name-input')?.value || '',
+                    city: document.getElementById('profile-city')?.value || '',
+                    district: document.getElementById('profile-district')?.value || '',
+                    neighborhood: document.getElementById('profile-neighborhood')?.value || '',
+                    addressDetail: document.getElementById('profile-address-detail')?.value || '',
                     addressPrivacy: document.getElementById('profile-address-privacy')?.value,
                     availability: document.getElementById('profile-availability')?.value || '',
                     payoutIban: document.getElementById('profile-payout-iban')?.value || ''
@@ -4056,7 +4225,10 @@
                 message.textContent = result.message || (result.success ? 'Ayarlar kaydedildi.' : 'Ayarlar kaydedilemedi.');
                 message.className = `mb-3 text-[11px] font-bold ${result.success ? 'text-green-600' : 'text-red-600'}`;
             }
-            if (result.success) showScreenNotice('Profil ayarları kaydedildi');
+            if (result.success) {
+                showScreenNotice('Profil ayarları kaydedildi');
+                await openProfileModal(false);
+            }
         }
 
         async function requestPayout() {
@@ -4493,6 +4665,74 @@
             const entries = Object.entries(packages).sort((a, b) => Number(a[0]) - Number(b[0]));
             if (!entries.length) return `<option value="7">7 gün - ${formatTl(siteSettings.featured_price || 0)}</option>`;
             return entries.map(([days, price]) => `<option value="${escapeHtml(days)}">${escapeHtml(days)} gün - ${formatTl(price)}</option>`).join('');
+        }
+        function getFeaturedPackageEntries() {
+            const packages = siteSettings.featured_packages || {};
+            const entries = Object.entries(packages)
+                .map(([days, price]) => [String(days), Number(price || 0)])
+                .filter(([days]) => Number(days) > 0)
+                .sort((a, b) => Number(a[0]) - Number(b[0]));
+            return entries.length ? entries : [['7', Number(siteSettings.featured_price || 0)]];
+        }
+        function getDefaultFeaturedPackageDays() {
+            const entries = getFeaturedPackageEntries();
+            const sevenDay = entries.find(([days]) => days === '7');
+            return (sevenDay || entries[0])[0];
+        }
+        function getFeaturedPackageBadge(days, index, total) {
+            if (String(days) === '7') return 'Popüler';
+            if (index === total - 1 && total > 1) return 'En uzun';
+            if (String(days) === '1') return 'Deneme';
+            return 'Paket';
+        }
+        function renderFeaturedPackageCards(productId) {
+            const entries = getFeaturedPackageEntries();
+            const selected = getDefaultFeaturedPackageDays();
+            return entries.map(([days, price], index) => {
+                const isSelected = days === selected;
+                const daily = Math.max(1, Number(days)) ? Math.round(Number(price || 0) / Math.max(1, Number(days))) : 0;
+                return `
+                    <button type="button" data-featured-package-card="${productId}" data-days="${escapeHtml(days)}" onclick="selectFeaturedPackage(${productId}, '${escapeJs(days)}')" class="text-left rounded-2xl border ${isSelected ? 'border-indigo-600 bg-white shadow-sm ring-2 ring-indigo-100' : 'border-indigo-100 bg-white/70 hover:bg-white'} p-3 transition">
+                        <span class="flex items-start justify-between gap-2">
+                            <span>
+                                <span class="block text-xl font-black text-indigo-900">${escapeHtml(days)} gün</span>
+                                <span class="block text-[10px] font-bold text-indigo-500 mt-0.5">${daily ? `${formatTl(daily)} / gün` : 'Ücretsiz'}</span>
+                            </span>
+                            <span class="${isSelected ? 'bg-indigo-900 text-white' : 'bg-indigo-100 text-indigo-700'} px-2 py-1 rounded-full text-[9px] font-black">${getFeaturedPackageBadge(days, index, entries.length)}</span>
+                        </span>
+                        <span class="block mt-3 text-lg font-black text-orange-600">${formatTl(price)}</span>
+                        <span class="mt-2 inline-flex items-center gap-1 text-[10px] font-black ${isSelected ? 'text-indigo-700' : 'text-gray-400'}">
+                            <i class="fa-solid ${isSelected ? 'fa-circle-check' : 'fa-circle'}"></i>${isSelected ? 'Seçili paket' : 'Seç'}
+                        </span>
+                    </button>
+                `;
+            }).join('');
+        }
+        function selectFeaturedPackage(productId, days) {
+            const input = document.getElementById(`featured-package-${productId}`);
+            if (input) input.value = days;
+            document.querySelectorAll(`[data-featured-package-card="${productId}"]`).forEach(card => {
+                const selected = card.dataset.days === String(days);
+                card.classList.toggle('border-indigo-600', selected);
+                card.classList.toggle('bg-white', selected);
+                card.classList.toggle('shadow-sm', selected);
+                card.classList.toggle('ring-2', selected);
+                card.classList.toggle('ring-indigo-100', selected);
+                card.classList.toggle('border-indigo-100', !selected);
+                card.classList.toggle('bg-white/70', !selected);
+                const status = card.querySelector('span.inline-flex');
+                if (status) {
+                    status.className = `mt-2 inline-flex items-center gap-1 text-[10px] font-black ${selected ? 'text-indigo-700' : 'text-gray-400'}`;
+                    status.innerHTML = `<i class="fa-solid ${selected ? 'fa-circle-check' : 'fa-circle'}"></i>${selected ? 'Seçili paket' : 'Seç'}`;
+                }
+                const badge = card.querySelector('span.rounded-full');
+                if (badge) {
+                    badge.classList.toggle('bg-indigo-900', selected);
+                    badge.classList.toggle('text-white', selected);
+                    badge.classList.toggle('bg-indigo-100', !selected);
+                    badge.classList.toggle('text-indigo-700', !selected);
+                }
+            });
         }
         function getFeaturedRequestStatusLabel(request) {
             if (!request) return '';

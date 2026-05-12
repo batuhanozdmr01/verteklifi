@@ -1850,7 +1850,7 @@ def get_cleanup_summary():
     orphan_uploads = cleanup_orphan_uploads(delete=False)
     return {
         "oldNotifications": Notification.query.filter(Notification.is_read == True, Notification.created_at < now - timedelta(days=30)).count(),
-        "oldAdminLogs": AdminLog.query.filter(AdminLog.created_at < now - timedelta(days=90)).count(),
+        "oldAdminLogs": AdminLog.query.count(),
         "oldPaymentErrors": PaymentErrorLog.query.filter(PaymentErrorLog.created_at < now - timedelta(days=30)).count(),
         "oldBackups": old_backup_count,
         "orphanUploads": orphan_uploads["orphanCount"]
@@ -4108,6 +4108,9 @@ def get_profile():
         "id": current_user.id,
         "name": current_user.name,
         "profile_image": get_user_profile_image_url(current_user.id),
+        "city": repair_turkish_mojibake(current_user.city or ""),
+        "district": repair_turkish_mojibake(current_user.district or ""),
+        "neighborhood": repair_turkish_mojibake(current_user.neighborhood or ""),
         "location": " / ".join(part for part in (current_user.city, current_user.district, current_user.neighborhood) if part),
         "address_detail": repair_turkish_mojibake(current_user.address_detail or ""),
         "address_privacy": current_user.address_privacy or "after_sale",
@@ -4236,13 +4239,31 @@ def update_profile_password():
 @login_required
 def update_profile_settings():
     data = request.json or {}
+    name = repair_turkish_mojibake(str(data.get('name') or current_user.name or '').strip())
+    city = repair_turkish_mojibake(str(data.get('city') or current_user.city or '').strip())
+    district = repair_turkish_mojibake(str(data.get('district') or current_user.district or '').strip())
+    neighborhood = repair_turkish_mojibake(str(data.get('neighborhood') or current_user.neighborhood or '').strip())
+    address_detail = repair_turkish_mojibake(str(data.get('addressDetail') or current_user.address_detail or '').strip())
     address_privacy = str(data.get('addressPrivacy') or '').strip()
     availability = repair_turkish_mojibake(str(data.get('availability') or '').strip())
     payout_iban = re.sub(r'\s+', '', repair_turkish_mojibake(str(data.get('payoutIban') or '').strip())).upper()
+    if len(name) < 2:
+        return jsonify({"success": False, "message": "Ad soyad en az 2 karakter olmalıdır."}), 400
+    if len(name) > 100:
+        return jsonify({"success": False, "message": "Ad soyad en fazla 100 karakter olabilir."}), 400
+    if not city or not district or not neighborhood:
+        return jsonify({"success": False, "message": "İl, ilçe ve mahalle seçmelisiniz."}), 400
+    if len(address_detail) < 10:
+        return jsonify({"success": False, "message": "Sokak, bina, daire gibi detay adresi yazmalısınız."}), 400
     if address_privacy not in {'after_sale', 'admin_only'}:
         return jsonify({"success": False, "message": "Adres gizlilik seçimi geçersiz."}), 400
     if payout_iban and (not payout_iban.startswith('TR') or len(payout_iban) != 26):
         return jsonify({"success": False, "message": "IBAN TR ile başlamalı ve 26 karakter olmalıdır."}), 400
+    current_user.name = name[:100]
+    current_user.city = city[:100]
+    current_user.district = district[:100]
+    current_user.neighborhood = neighborhood[:100]
+    current_user.address_detail = address_detail[:300]
     current_user.address_privacy = address_privacy
     current_user.availability_text = availability[:200] or None
     current_user.payout_iban = payout_iban or None
@@ -6219,7 +6240,7 @@ def admin_data_cleanup():
     if action == 'notifications':
         deleted = Notification.query.filter(Notification.is_read == True, Notification.created_at < now - timedelta(days=30)).delete(synchronize_session=False)
     elif action == 'logs':
-        deleted = AdminLog.query.filter(AdminLog.created_at < now - timedelta(days=90)).delete(synchronize_session=False)
+        deleted = AdminLog.query.delete(synchronize_session=False)
     elif action == 'payment_errors':
         deleted = PaymentErrorLog.query.filter(PaymentErrorLog.created_at < now - timedelta(days=30)).delete(synchronize_session=False)
     elif action == 'backups':
@@ -6228,7 +6249,8 @@ def admin_data_cleanup():
         deleted = cleanup_orphan_uploads(delete=True)["removedCount"]
     else:
         return jsonify({"success": False, "message": "Geçersiz temizlik işlemi."}), 400
-    log_admin_action("Veri temizliği çalıştırıldı", "cleanup", None, f"{action}: {deleted}")
+    if action != 'logs':
+        log_admin_action("Veri temizliği çalıştırıldı", "cleanup", None, f"{action}: {deleted}")
     db.session.commit()
     return jsonify({"success": True, "deleted": deleted, "summary": get_cleanup_summary()})
 
