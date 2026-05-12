@@ -73,7 +73,8 @@
             #modal-profile,
             #modal-orders,
             #modal-messages,
-            #modal-user-actions {
+            #modal-user-actions,
+            #modal-intro-guide {
                 padding: 0;
                 align-items: stretch;
             }
@@ -84,7 +85,8 @@
             #modal-profile > div,
             #modal-orders > div,
             #modal-messages > div,
-            #modal-user-actions > div {
+            #modal-user-actions > div,
+            #modal-intro-guide > div {
                 width: 100%;
                 max-width: none;
                 max-height: 100dvh;
@@ -140,6 +142,40 @@
             }
             .mobile-filter-summary:not(:empty) {
                 display: flex;
+            }
+            #modal-intro-guide {
+                padding: 0;
+                align-items: stretch;
+            }
+            #modal-intro-guide > div {
+                height: 100dvh;
+                min-height: 100dvh;
+                max-height: 100dvh;
+                border-radius: 0;
+            }
+            #modal-intro-guide .intro-guide-header {
+                padding: 1rem 1rem 0.85rem;
+            }
+            #modal-intro-guide .intro-guide-title {
+                font-size: 1.35rem;
+                line-height: 1.15;
+            }
+            #modal-intro-guide .intro-guide-body {
+                padding: 1rem;
+                gap: 0.65rem;
+            }
+            #modal-intro-guide .intro-guide-card,
+            #modal-intro-guide .intro-guide-consent {
+                border-radius: 1rem;
+                padding: 0.85rem;
+            }
+            #modal-intro-guide .intro-guide-footer {
+                padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+            }
+            #modal-intro-guide .intro-guide-button {
+                padding-top: 0.95rem;
+                padding-bottom: 0.95rem;
+                border-radius: 1rem;
             }
             #sidebar {
                 width: min(86vw, 20rem);
@@ -503,6 +539,9 @@
                             </label>
                         </div>
                         <div id="new-shipping-desi-wrap" class="hidden">
+                            <select id="new-shipping-carrier" class="mb-2 w-full border border-green-100 p-3 rounded-lg text-sm outline-none bg-white">
+                                <option value="">Kargo firması seç</option>
+                            </select>
                             <select id="new-shipping-desi" class="w-full border border-green-100 p-3 rounded-lg text-sm outline-none bg-white">
                                 <option value="">Kargo desisi seç</option>
                                 <option value="1">1 desi</option>
@@ -631,6 +670,42 @@
                     <p id="user-report-error" class="hidden text-[11px] text-red-600 font-bold mt-2"></p>
                     <button onclick="submitUserReport()" class="mt-2 w-full bg-red-600 text-white py-2 rounded-xl text-xs font-black">Şikayeti Gönder</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-intro-guide" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-[140] p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div class="intro-guide-header p-6 border-b border-gray-100 bg-orange-50">
+                <p class="text-[10px] font-black text-orange-600 uppercase">Verteklifi rehberi</p>
+                <h2 class="intro-guide-title text-2xl sm:text-3xl font-black text-gray-900 mt-1">Takas ve güvenli alışveriş nasıl işler?</h2>
+                <p class="text-xs sm:text-sm font-bold text-gray-500 mt-2">Başlamadan önce kısa kuralları okuyup onaylayın.</p>
+            </div>
+            <div class="intro-guide-body p-6 overflow-y-auto custom-scrollbar space-y-3 min-h-0 flex-1">
+                <div class="intro-guide-card rounded-2xl border border-orange-100 bg-orange-50 p-4">
+                    <p class="text-sm font-black text-orange-900"><i class="fa-solid fa-repeat mr-2"></i>Takas teklifi</p>
+                    <p class="text-xs font-bold text-orange-800 mt-1">Takasa açık ilanda kendi aktif ilanınla teklif gönderebilirsin. Teklif sohbet bölümüne düşer, iki taraf anlaşmadan işlem tamamlanmış sayılmaz.</p>
+                </div>
+                <div class="intro-guide-card rounded-2xl border border-green-100 bg-green-50 p-4">
+                    <p class="text-sm font-black text-green-900"><i class="fa-solid fa-circle-check mr-2"></i>Güvenli alışveriş</p>
+                    <p class="text-xs font-bold text-green-800 mt-1">Satıcı kabul ettikten sonra alıcı devam etmek isterse ödeme ve kargo adımları takip edilir. Para, teslimat ve onay süreci tamamlanmadan satıcıya aktarılabilir hale gelmez.</p>
+                </div>
+                <div class="intro-guide-card rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                    <p class="text-sm font-black text-blue-900"><i class="fa-solid fa-truck-fast mr-2"></i>Kargo ve teslimat</p>
+                    <p class="text-xs font-bold text-blue-800 mt-1">Kargo ücretini ilanda seçilen taraf öder. Satıcı takip kodunu girdiğinde alıcı sipariş ekranından kargo durumunu görebilir.</p>
+                </div>
+                <div class="intro-guide-card rounded-2xl border border-red-100 bg-red-50 p-4">
+                    <p class="text-sm font-black text-red-900"><i class="fa-solid fa-circle-exclamation mr-2"></i>Sorun ve destek</p>
+                    <p class="text-xs font-bold text-red-800 mt-1">Üründe, ödeme sürecinde veya kargoda sorun olursa destek talebi açabilirsin. Admin incelemesi gerekirse işlem beklemeye alınabilir.</p>
+                </div>
+                <label class="intro-guide-consent flex items-start gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 cursor-pointer">
+                    <input id="intro-guide-consent" type="checkbox" class="mt-1 h-5 w-5 accent-orange-600">
+                    <span class="text-xs font-bold text-gray-600 leading-relaxed">Takas, güvenli alışveriş, kargo ve destek sürecinin nasıl işlediğini okudum, anladım ve kabul ediyorum.</span>
+                </label>
+                <p id="intro-guide-error" class="hidden text-xs font-bold text-red-600">Devam etmek için onay kutusunu işaretlemelisiniz.</p>
+            </div>
+            <div class="intro-guide-footer p-4 border-t border-gray-100 bg-white">
+                <button onclick="acceptIntroGuide()" class="intro-guide-button w-full bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-2xl text-sm font-black transition">Okudum, Onaylıyorum</button>
             </div>
         </div>
     </div>
@@ -980,11 +1055,13 @@
         window.onload = async () => {
             initSidebar();
             initModalCategories();
+            initShippingCarrierSelects();
             await initTurkeyData();
             initImagePreview();
             initOutsideCloseHandlers();
             await fetchProducts();
             openInitialProductFromUrl();
+            showIntroGuideIfNeeded();
             if (appState.isAuthenticated) {
                 await loadNotifications();
                 setInterval(loadNotifications, 5000);
@@ -997,6 +1074,24 @@
                 if (panel && !panel.classList.contains('hidden')) positionNotificationPanel();
             });
         };
+
+        function showIntroGuideIfNeeded() {
+            if (localStorage.getItem('verteklifiIntroGuideAccepted') === '1') return;
+            const modal = document.getElementById('modal-intro-guide');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function acceptIntroGuide() {
+            const consent = document.getElementById('intro-guide-consent');
+            const error = document.getElementById('intro-guide-error');
+            if (!consent?.checked) {
+                error?.classList.remove('hidden');
+                return;
+            }
+            localStorage.setItem('verteklifiIntroGuideAccepted', '1');
+            document.getElementById('modal-intro-guide')?.classList.add('hidden');
+            showScreenNotice('Bilgilendirme onaylandı');
+        }
 
         function initOutsideCloseHandlers() {
             ['modal-profile', 'modal-messages', 'modal-listing-preview'].forEach(modalId => {
@@ -1498,7 +1593,7 @@
                     window.location.reload();
                 }
             } else {
-                loginError.textContent = response.status === 403 ? result.message : "E-posta veya şifre hatalı.";
+                loginError.textContent = result.message || "E-posta veya şifre hatalı.";
                 loginError.classList.remove('hidden');
                 emailInput.classList.add('border-red-500', 'bg-red-50');
                 passwordInput.classList.add('border-red-500', 'bg-red-50');
@@ -1526,8 +1621,8 @@
                 return;
             }
 
-            if (password.length < 6) {
-                showScreenNotice("Şifre en az 6 karakter olmalıdır!", "error");
+            if (password.length < 8 || !/[a-zçğıöşü]/.test(password) || !/[A-ZÇĞİÖŞÜ]/.test(password) || !/\d/.test(password)) {
+                showScreenNotice("Şifre en az 8 karakter, büyük/küçük harf ve rakam içermelidir.", "error");
                 return;
             }
 
@@ -1624,7 +1719,7 @@
                 container.insertAdjacentHTML('beforeend', `
                     <div onclick="showDetails(${p.id})" class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100 overflow-hidden cursor-pointer relative group">
                         ${statusBadge}
-                        ${p.isFeatured ? '<div class="absolute top-20 left-2 z-10 bg-indigo-900 text-white px-2 py-1 rounded-lg text-[9px] font-black shadow"><i class="fa-solid fa-star mr-1"></i>Öne çıkan</div>' : ''}
+                        ${p.isFeatured ? `<div class="absolute top-20 left-2 z-10 bg-indigo-900 text-white px-2 py-1 rounded-lg text-[9px] font-black shadow"><i class="fa-solid fa-star mr-1"></i>Öne çıkan${p.featuredStatus?.remainingText && currentUserId === p.owner_id ? ` · ${escapeHtml(p.featuredStatus.remainingText)}` : ''}</div>` : ''}
                         ${appState.isAuthenticated ? `<button onclick="toggleFavorite(event, ${p.id})" class="absolute top-8 right-2 z-20 ${p.isFavorite ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-500'} hover:bg-red-500 hover:text-white w-8 h-8 rounded-full shadow transition" title="Favori"><i class="fa-solid fa-heart text-xs"></i></button>` : ''}
                         <div class="absolute top-2 left-2 z-10 bg-black/70 text-white px-2 py-1 rounded-lg text-[10px] font-bold">
                             <span class="timer-display" data-id="${p.id}" data-endtime="${p.endTime}">
@@ -1636,7 +1731,7 @@
                         <div class="p-4">
                             <h3 class="font-bold text-sm truncate text-gray-700">${p.title}</h3>
                             ${trustLabel ? `<p class="mt-1 inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-shield-halved"></i> Güven: ${escapeHtml(trustLabel)}</p>` : ''}
-                            ${p.securePurchase ? `<p class="mt-1 inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-lock"></i> Güvenli ödeme</p><p class="mt-1 inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-truck-fast"></i> Anlaşmalı kargo</p>` : ''}
+                            ${p.securePurchase ? `<p class="mt-1 inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-circle-check"></i> Güvenli ödeme</p><p class="mt-1 inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full text-[9px] font-black"><i class="fa-solid fa-truck-fast"></i> Anlaşmalı kargo</p>` : ''}
                             <div class="flex items-center justify-between mt-2 text-[10px] font-bold text-gray-400">
                                 <span><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.location || 'Konum yok')}</span>
                                 <span><i class="fa-solid fa-eye mr-1"></i>${p.viewCount || 0}</span>
@@ -1806,16 +1901,27 @@
 
             if (p.status === 'active') {
                 if (currentUserId === p.owner_id) {
+                    const featureRequest = p.myFeaturedRequest || null;
                     const featurePrompt = p.isFeatured ? `
                         <div class="mb-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
                             <p class="text-sm font-black text-indigo-900"><i class="fa-solid fa-star mr-2"></i>İlanınız öne çıkarılmış.</p>
-                            <p class="text-[11px] font-bold text-indigo-700 mt-1">Ana sayfada üst sıralarda gösterilir.</p>
+                            <p class="text-[11px] font-bold text-indigo-700 mt-1">Ana sayfada üst sıralarda gösterilir.${p.featuredStatus?.remainingText ? ` Kalan süre: ${escapeHtml(p.featuredStatus.remainingText)}.` : ''}</p>
+                        </div>
+                    ` : featureRequest ? `
+                        <div class="mb-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                            <p class="text-sm font-black text-indigo-900"><i class="fa-solid fa-star mr-2"></i>Öne çıkarma talebi</p>
+                            <p class="text-[11px] font-bold text-indigo-700 mt-1">${escapeHtml(featureRequest.packageDays)} gün · ${formatTl(featureRequest.paymentAmount)} · ${escapeHtml(getFeaturedRequestStatusLabel(featureRequest))}</p>
+                            ${featureRequest.adminResponse ? `<p class="mt-2 bg-white/70 rounded-lg px-3 py-2 text-[10px] font-bold text-indigo-700">${escapeHtml(featureRequest.adminResponse)}</p>` : ''}
+                            ${featureRequest.paymentStatus !== 'paid' && featureRequest.status !== 'rejected' ? `<button onclick="startFeaturedPayment(${featureRequest.id})" class="mt-3 w-full bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-credit-card mr-2"></i>Ödemeyi Yap</button>${!appState.paytrConfigured ? `<button onclick="completeMockFeaturedPayment(${featureRequest.id}, ${p.id})" class="mt-2 w-full bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-vial mr-2"></i>Test Ödemeyi Tamamla</button>` : ''}` : ''}
                         </div>
                     ` : `
                         <div class="mb-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-center">
                             <p class="text-sm font-black text-indigo-900">İlanınızı öne çıkarmak ister misiniz?</p>
-                            <p class="text-[11px] font-bold text-indigo-700 mt-1">Başlangıç: ${Number(siteSettings.featured_price || 0).toLocaleString()} TL. İstek admin onayına gönderilir.</p>
-                            <button onclick="requestProductFeatured(${p.id})" class="mt-3 bg-indigo-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-star mr-2"></i>Öne çıkarma isteği gönder</button>
+                            <p class="text-[11px] font-bold text-indigo-700 mt-1">Paket seç, ödeme/onay akışı admin paneline düşsün.</p>
+                            <select id="featured-package-${p.id}" class="mt-3 w-full bg-white border border-indigo-100 rounded-xl px-3 py-2 text-xs font-black text-indigo-900">
+                                ${renderFeaturedPackageOptions()}
+                            </select>
+                            <button onclick="requestProductFeatured(${p.id})" class="mt-3 bg-indigo-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-star mr-2"></i>Paketi Seç ve İstek Gönder</button>
                         </div>
                     `;
                     actionArea = featurePrompt + `<div class="bg-orange-50 p-4 rounded-xl border border-orange-200 text-center"><p class="text-xs font-bold text-orange-800">Kendi ilanınız. Teklifleri aşağıdan yönetin.</p></div>` + bidsHtml;
@@ -1867,6 +1973,7 @@
                 const payment = p.payment_intent || null;
                 actionArea = `<div class="bg-green-50 p-4 rounded-xl border border-green-200 text-xs font-bold text-green-700 space-y-1">
                     <p class="text-sm font-black uppercase mb-1">Eşleşme Tamamlandı!</p>
+                    ${renderSaleTimeline(p)}
                     ${payment ? `<div class="mb-3 rounded-xl bg-white border border-green-100 p-3 text-[10px] font-black text-green-800 space-y-1">
                         <p>Ödeme durumu: ${escapeHtml(payment.statusLabel)}</p>
                         <p>Alıcı toplamı: ${formatTl(payment.buyerTotal)} · Satıcı payı: ${formatTl(payment.sellerPayoutAmount)}</p>
@@ -1940,6 +2047,10 @@
                                         Satıcı öder
                                     </label>
                                 </div>
+                                <select id="edit-product-shipping-carrier-${p.id}" class="w-full border border-indigo-100 rounded-lg p-2 text-xs bg-white">
+                                    <option value="">Kargo firması seç</option>
+                                    ${renderShippingCarrierOptions(p.shippingCarrier || p.secureShippingCarrier || siteSettings.secure_shipping_carrier || '')}
+                                </select>
                                 <select id="edit-product-shipping-desi-${p.id}" class="w-full border border-indigo-100 rounded-lg p-2 text-xs bg-white">
                                     ${['', '1', '2', '3', '4', '5', '10', '15', '20', '30'].map(value => `<option value="${value}" ${String(p.shippingDesi || '') === value ? 'selected' : ''}>${value ? `${value} desi` : 'Kargo desisi seç'}</option>`).join('')}
                                 </select>
@@ -2004,6 +2115,7 @@
                         <p class="flex flex-wrap items-center gap-2">Takip kodu: <span>${escapeHtml(saleProgress.tracking_code || 'Henüz girilmedi')}</span>${saleProgress.tracking_code ? `<button onclick="copyTrackingCode('${escapeJs(saleProgress.tracking_code)}')" class="bg-green-100 text-green-800 px-2 py-1 rounded-lg text-[9px] font-black">Kopyala</button>` : ''}</p>
                         ${renderTrackingButton(saleProgress, 'mt-2 inline-flex items-center justify-center')}
                     </div>`}
+                    ${renderTrackingHistory(saleProgress)}
                     <button onclick="toggleSaleIssueBox(${p.id})" class="mt-3 w-full bg-red-50 hover:bg-red-100 text-red-700 border border-red-100 py-2 rounded-xl text-xs font-black transition"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Sorun bildir</button>
                     <div id="sale-issue-box-${p.id}" class="hidden mt-2 bg-white border border-red-100 rounded-xl p-3">
                         <textarea id="sale-issue-text-${p.id}" class="w-full border border-red-100 rounded-lg p-2 text-xs outline-none" rows="2" placeholder="Sorunu kısaca yazın"></textarea>
@@ -2037,7 +2149,7 @@
             const safetyHtml = `
                 <div class="bg-yellow-50 border border-yellow-100 rounded-2xl p-4 mb-4">
                     <div class="flex items-start gap-3">
-                        <span class="w-9 h-9 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-shield-halved"></i></span>
+                        <span class="w-9 h-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-circle-check"></i></span>
                         <div>
                             <p class="text-sm font-black text-yellow-900">Güvenli alışveriş notu</p>
                             <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-bold text-yellow-800">
@@ -2073,9 +2185,9 @@
                             <span class="${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} px-3 py-1 rounded-full text-[10px] font-black uppercase">${p.statusLabel || p.status}</span>
                             ${p.condition ? `<span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(p.condition)}</span>` : ''}
                             ${p.exchangeOpen ? '<span class="bg-orange-50 text-orange-700 border border-orange-100 px-3 py-1 rounded-full text-[10px] font-black lowercase">Takasa açık</span>' : ''}
-                            ${p.securePurchase ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-lock mr-1"></i>Güvenli alışveriş</span>` : ''}
+                            ${p.securePurchase ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-circle-check mr-1"></i>Güvenli alışveriş</span>` : ''}
                             ${p.securePurchase ? `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(p.secureShippingCarrier || 'Anlaşmalı kargo')} · ${escapeHtml(p.shippingPayerLabel || getShippingPayerLabel(p.shippingPayer))}${p.shippingDesi ? ` · ${escapeHtml(String(p.shippingDesi))} desi` : ''}${p.secureShippingFee ? ` · ${formatTl(p.secureShippingFee)}` : ''}</span>` : ''}
-                            ${p.isFeatured ? '<span class="bg-indigo-900 text-white px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-star mr-1"></i>Öne çıkan</span>' : ''}
+                            ${p.isFeatured ? `<span class="bg-indigo-900 text-white px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-star mr-1"></i>Öne çıkan${p.featuredStatus?.remainingText && currentUserId === p.owner_id ? ` · ${escapeHtml(p.featuredStatus.remainingText)}` : ''}</span>` : ''}
                             ${p.owner_trust ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-shield-halved mr-1"></i>Güven: ${escapeHtml(p.owner_trust.label)}</span>` : ''}
                             <span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-location-dot mr-1"></i>${escapeHtml(p.location || 'Konum yok')}</span>
                             ${appState.isAuthenticated ? `<button onclick="toggleFavorite(event, ${p.id})" class="${p.isFavorite ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'} px-3 py-1 rounded-full text-[10px] font-black hover:bg-red-500 hover:text-white transition"><i class="fa-solid fa-heart mr-1"></i>${p.isFavorite ? 'Favoride' : 'Favori'}</button>` : ''}
@@ -2429,6 +2541,14 @@
             return shippingCarriers.map(carrier => `<option value="${escapeHtml(carrier)}" ${carrier === selected ? 'selected' : ''}>${escapeHtml(carrier)}</option>`).join('');
         }
 
+        function initShippingCarrierSelects() {
+            const select = document.getElementById('new-shipping-carrier');
+            if (!select) return;
+            const preferred = siteSettings.secure_shipping_carrier || shippingCarriers[0] || '';
+            select.innerHTML = '<option value="">Kargo firması seç</option>' + renderShippingCarrierOptions(preferred);
+            select.value = preferred;
+        }
+
         function getShippingTrackingUrl(progress = {}) {
             if (!progress.shipping_carrier || !progress.tracking_code) return '';
             return shippingTrackingUrls[progress.shipping_carrier] || '';
@@ -2440,6 +2560,23 @@
             return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${extraClass || 'inline-flex items-center justify-center'} bg-indigo-900 hover:bg-black text-white px-3 py-2 rounded-xl text-[10px] font-black transition">
                 <i class="fa-solid fa-truck-fast mr-2"></i>Kargo Takip
             </a>`;
+        }
+
+        function renderTrackingHistory(progress = {}) {
+            const events = Array.isArray(progress.tracking_events) ? progress.tracking_events : [];
+            if (!events.length) return '<p class="mt-2 text-[10px] font-bold text-green-700 bg-white/60 rounded-lg px-3 py-2">Henüz kargo geçmişi yok.</p>';
+            return `<div class="mt-2 bg-white/80 border border-green-100 rounded-xl p-3">
+                <p class="text-[10px] font-black text-green-900 uppercase mb-2">Kargo geçmişi</p>
+                <div class="space-y-2">
+                    ${events.map(event => `<div class="flex items-start gap-2 text-[10px] font-bold text-green-800">
+                        <span class="mt-1 h-2 w-2 rounded-full bg-green-600 shrink-0"></span>
+                        <span class="min-w-0">
+                            <span class="block font-black">${escapeHtml(event.statusLabel || event.status || '')} · ${escapeHtml(event.createdAt || '')}</span>
+                            <span class="block text-green-700 break-words">${escapeHtml([event.carrier, event.trackingCode].filter(Boolean).join(' / ') || event.note || '')}</span>
+                        </span>
+                    </div>`).join('')}
+                </div>
+            </div>`;
         }
 
         function renderBuyerInfoCard(info, title = 'Alıcı adres bilgileri') {
@@ -2592,6 +2729,8 @@
                 bid: { label: 'Teklifler', icon: 'fa-gavel', color: 'bg-green-100 text-green-700' },
                 rating: { label: 'Yorumlar', icon: 'fa-star', color: 'bg-yellow-100 text-yellow-700' },
                 exchange: { label: 'Takas', icon: 'fa-right-left', color: 'bg-indigo-100 text-indigo-700' },
+                payment: { label: 'Ödeme', icon: 'fa-credit-card', color: 'bg-green-100 text-green-700' },
+                sale: { label: 'Sipariş', icon: 'fa-truck-fast', color: 'bg-blue-100 text-blue-700' },
                 admin: { label: 'Admin', icon: 'fa-user-shield', color: 'bg-red-100 text-red-700' },
                 info: { label: 'Diğer', icon: 'fa-bell', color: 'bg-gray-100 text-gray-600' }
             };
@@ -2600,27 +2739,55 @@
 
         function renderNotificationItem(item) {
             const meta = getNotificationMeta(item.type);
+            const deleteAction = item.ids && item.ids.length > 1
+                ? `deleteNotificationGroup(event, '${item.ids.join(',')}')`
+                : `deleteNotification(event, ${item.id})`;
             return `
                 <div class="flex items-stretch border-b border-gray-50 last:border-b-0 ${item.is_read ? 'opacity-70' : ''}">
                     <button onclick="${item.type === 'private_message' ? 'openMessagesFromNotification()' : `openNotificationProduct(${item.product_id || 'null'})`}" class="flex-1 text-left p-4 hover:bg-orange-50 transition">
                         <div class="flex items-start gap-3">
                             <span class="mt-1 ${item.is_read ? 'bg-gray-200 text-gray-500' : meta.color} w-8 h-8 rounded-full flex items-center justify-center"><i class="fa-solid ${meta.icon} text-xs"></i></span>
                             <span class="flex-1 min-w-0">
-                                <span class="block text-xs font-black text-gray-800 break-words">${escapeHtml(item.title)}</span>
+                                <span class="block text-xs font-black text-gray-800 break-words">${escapeHtml(item.title)}${item.count > 1 ? ` <span class="ml-1 bg-indigo-900 text-white rounded-full px-2 py-0.5 text-[9px]">${item.count}</span>` : ''}</span>
                                 <span class="block text-[11px] text-gray-500 mt-1 break-words">${escapeHtml(item.message)}</span>
                                 <span class="block text-[10px] text-gray-400 mt-1">${item.created_at}</span>
                             </span>
                         </div>
                     </button>
-                    <button onclick="deleteNotification(event, ${item.id})" class="w-11 shrink-0 text-red-500 hover:bg-red-50 hover:text-red-700 transition" title="Bildirimi sil">
+                    <button onclick="${deleteAction}" class="w-11 shrink-0 text-red-500 hover:bg-red-50 hover:text-red-700 transition" title="Bildirimi sil">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
             `;
         }
 
+        function groupNotificationItems(items) {
+            const map = new Map();
+            items.forEach(item => {
+                const key = ['bid', 'exchange', 'payment', 'sale'].includes(item.type)
+                    ? `${item.type}:${item.product_id || 'none'}:${item.title}`
+                    : `${item.type}:${item.id}`;
+                if (!map.has(key)) {
+                    map.set(key, { ...item, ids: [item.id], count: 1 });
+                    return;
+                }
+                const grouped = map.get(key);
+                grouped.ids.push(item.id);
+                grouped.count += 1;
+                grouped.is_read = grouped.is_read && item.is_read;
+                grouped.created_at = item.created_at;
+                if (grouped.count > 1 && item.type === 'bid') {
+                    grouped.title = 'Teklif bildirimleri';
+                    grouped.message = `${grouped.count} teklif bildirimi bu ilanda toplandı.`;
+                } else if (grouped.count > 1) {
+                    grouped.message = `${grouped.count} bildirim bu başlık altında toplandı.`;
+                }
+            });
+            return Array.from(map.values());
+        }
+
         function renderNotificationGroups(data) {
-            const items = data.items || [];
+            const items = groupNotificationItems(data.items || []);
             const hasMessages = (data.messageUnreadCount || 0) > 0;
             if (!items.length && !hasMessages) {
                 return renderEmptyState({
@@ -2653,7 +2820,7 @@
                     </button>
                 </div>
             ` : '';
-            const groupOrder = ['Teklifler', 'Yorumlar', 'Takas', 'Admin', 'Diğer', 'Mesajlar'];
+            const groupOrder = ['Teklifler', 'Ödeme', 'Sipariş', 'Yorumlar', 'Takas', 'Admin', 'Diğer', 'Mesajlar'];
             const sections = groupOrder
                 .filter(label => groups[label] && groups[label].length)
                 .map(label => `
@@ -2755,6 +2922,14 @@
             } else {
                 showScreenNotice(result.message || 'Bildirim silinemedi', 'error');
             }
+        }
+
+        async function deleteNotificationGroup(event, idsText) {
+            event.stopPropagation();
+            const ids = String(idsText || '').split(',').map(Number).filter(Boolean);
+            await Promise.all(ids.map(id => fetch(`/api/notifications/${id}`, { method: 'DELETE' })));
+            await loadNotifications();
+            showScreenNotice('Bildirim grubu silindi');
         }
 
         async function openNotificationProduct(productId) {
@@ -3453,14 +3628,14 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                         ${[
                             ['Bekleyen', profile.wallet?.pendingPayout || 0],
+                            ['Hazırlanan', profile.wallet?.preparingPayout || 0],
                             ['Aktarılan', profile.wallet?.paidOut || 0],
-                            ['Satış', profile.wallet?.salesGross || 0],
                             ['Alış', profile.wallet?.purchaseTotal || 0]
                         ].map(([label, value]) => `<div class="bg-white rounded-xl border border-green-100 p-3"><p class="text-lg font-black text-green-700">${formatTl(value)}</p><p class="text-[9px] font-black text-green-800 uppercase">${label}</p></div>`).join('')}
                     </div>
-                    <button onclick="requestPayout()" class="mb-3 w-full bg-green-700 hover:bg-green-800 text-white px-4 py-3 rounded-xl text-xs font-black transition">
+                    ${(profile.wallet?.pendingPayout || 0) > 0 ? `<button onclick="requestPayout()" class="mb-3 w-full bg-green-700 hover:bg-green-800 text-white px-4 py-3 rounded-xl text-xs font-black transition">
                         <i class="fa-solid fa-money-bill-transfer mr-2"></i>Aktarılabilir Bakiyeyi Talep Et
-                    </button>
+                    </button>` : '<p class="mb-3 bg-white/70 rounded-xl p-3 text-[11px] font-bold text-green-700">Aktarılabilir bakiye oluşunca buradan talep gönderebilirsin.</p>'}
                     <div class="space-y-2">
                         ${(profile.payments || []).length ? profile.payments.map(payment => `
                             <button onclick="toggleModal('modal-profile'); showDetails(${payment.productId})" class="w-full text-left bg-white border border-green-100 rounded-xl p-3 hover:bg-green-100 transition">
@@ -3595,9 +3770,21 @@
                     </button>
                 </div>
                 <div class="mt-6 bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-                    <p class="text-sm font-black text-indigo-900 mb-2">İtiraz / destek talebi</p>
+                    <p class="text-sm font-black text-indigo-900 mb-2">Destek talebi oluştur</p>
                     <textarea id="appeal-message" class="w-full border border-indigo-100 rounded-xl p-3 text-sm h-24" placeholder="Adminin incelemesi için mesajınızı yazın"></textarea>
                     <button onclick="sendAppeal()" class="mt-2 bg-indigo-900 text-white px-4 py-2 rounded-xl text-xs font-black">Gönder</button>
+                    <div class="mt-4 space-y-2">
+                        ${(profile.supportTickets || []).length ? profile.supportTickets.map(ticket => `
+                            <div class="bg-white border border-indigo-100 rounded-xl p-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[10px] font-black text-indigo-900">${escapeHtml(ticket.createdAt)}</span>
+                                    <span class="text-[9px] font-black rounded-full px-2 py-1 ${ticket.status === 'open' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}">${ticket.status === 'open' ? 'Açık' : 'Yanıtlandı'}</span>
+                                </div>
+                                <p class="mt-2 text-xs font-bold text-gray-700 break-words">${escapeHtml(ticket.message)}</p>
+                                ${ticket.adminResponse ? `<p class="mt-2 text-xs font-bold text-green-700 bg-green-50 rounded-lg p-2">Admin: ${escapeHtml(ticket.adminResponse)}</p>` : ''}
+                            </div>
+                        `).join('') : '<p class="text-xs text-indigo-700 font-bold bg-white/70 rounded-xl p-3">Henüz destek talebiniz yok.</p>'}
+                    </div>
                 </div>
                 <div id="profile-support" class="mt-6 bg-gray-50 border border-gray-100 rounded-2xl p-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
@@ -3672,6 +3859,26 @@
             return stages[order.status] || { label: order.statusLabel || 'Takipte', color: 'bg-gray-50 text-gray-700 border-gray-100', icon: 'fa-clock' };
         }
 
+        function renderSaleTimeline(item) {
+            const progress = item.sale_progress || item.saleProgress || {};
+            const payment = item.payment_intent || item.paymentIntent || {};
+            const paid = ['escrow', 'ready_for_payout', 'paid_out'].includes(payment.status);
+            const shipped = ['kargoda', 'teslim_edildi'].includes(progress.shipping_status);
+            const delivered = progress.shipping_status === 'teslim_edildi' || progress.buyer_received_confirmed;
+            const payoutReady = payment.status === 'ready_for_payout' || payment.status === 'paid_out';
+            const steps = [
+                ['Teklif kabul edildi', true],
+                ['Ödeme bekleniyor', Boolean(payment.status)],
+                ['Para güvende', paid],
+                ['Kargoda', shipped],
+                ['Teslim edildi', delivered],
+                ['Satıcıya aktarılabilir', payoutReady]
+            ];
+            return `<div class="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                ${steps.map(([label, done]) => `<span class="${done ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-400 border-gray-100'} border rounded-xl px-2 py-2 text-center text-[9px] font-black">${done ? '<i class="fa-solid fa-check mr-1"></i>' : '<i class="fa-regular fa-circle mr-1"></i>'}${escapeHtml(label)}</span>`).join('')}
+            </div>`;
+        }
+
         function renderOrderProgress(order) {
             const progress = order.saleProgress || {};
             const payment = order.paymentIntent || null;
@@ -3696,7 +3903,8 @@
             if (order.status !== 'completed') {
                 return '<p class="text-[11px] font-bold text-gray-400 mt-2">Kargo ve teslimat detayları yakında eklenecek.</p>';
             }
-            return `<div class="mt-3 grid grid-cols-3 gap-2">${items.map(([field, label]) => `
+            return `${renderSaleTimeline(order)}
+            <div class="mt-3 grid grid-cols-3 gap-2">${items.map(([field, label]) => `
                 <span class="${progress[field] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'} rounded-lg px-2 py-1 text-center text-[10px] font-black">${label}</span>
             `).join('')}</div>
             ${payment ? `<div class="mt-2 rounded-xl bg-green-50 border border-green-100 p-3 text-[10px] font-bold text-green-800 space-y-1">
@@ -3712,7 +3920,8 @@
                 <p class="flex flex-wrap items-center gap-2">Takip kodu: <span>${escapeHtml(progress.tracking_code || 'Henüz girilmedi')}</span>${progress.tracking_code ? `<button onclick="copyTrackingCode('${escapeJs(progress.tracking_code)}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-[9px] font-black">Kopyala</button>` : ''}</p>
                 ${progress.auto_confirm_at ? `<p>Alıcı onaylamazsa otomatik onay hazırlığı: ${escapeHtml(progress.auto_confirm_at)}</p>` : ''}
                 ${renderTrackingButton(progress)}
-            </div>`;
+            </div>
+            ${renderTrackingHistory(progress)}`;
         }
 
         async function openOrdersModal() {
@@ -3799,8 +4008,8 @@
                 message.className = 'mt-2 text-[11px] font-bold text-red-600';
                 return;
             }
-            if (newPassword.length < 6) {
-                message.textContent = 'Yeni şifre en az 6 karakter olmalıdır.';
+            if (newPassword.length < 8 || !/[a-zçğıöşü]/.test(newPassword) || !/[A-ZÇĞİÖŞÜ]/.test(newPassword) || !/\d/.test(newPassword)) {
+                message.textContent = 'Yeni şifre en az 8 karakter, büyük/küçük harf ve rakam içermelidir.';
                 message.className = 'mt-2 text-[11px] font-bold text-red-600';
                 return;
             }
@@ -3821,6 +4030,9 @@
                 message.textContent = result.message || 'Şifre güncellendi.';
                 message.className = 'mt-2 text-[11px] font-bold text-green-600';
                 showScreenNotice('Şifre güncellendi');
+                if (result.requiresLogin) {
+                    setTimeout(() => window.location.reload(), 1200);
+                }
             } else {
                 message.textContent = result.message || 'Şifre güncellenemedi.';
                 message.className = 'mt-2 text-[11px] font-bold text-red-600';
@@ -4006,7 +4218,12 @@
                 return;
             }
             const securePurchase = document.getElementById(`edit-product-secure-${productId}`)?.checked || false;
+            const shippingCarrier = document.getElementById(`edit-product-shipping-carrier-${productId}`)?.value || '';
             const shippingDesi = document.getElementById(`edit-product-shipping-desi-${productId}`)?.value || '';
+            if (securePurchase && !shippingCarrier) {
+                showScreenNotice("Kargo firmasını seçmelisiniz", "error");
+                return;
+            }
             if (securePurchase && !shippingDesi) {
                 showScreenNotice("Kargo desisini seçmelisiniz", "error");
                 return;
@@ -4017,6 +4234,7 @@
                 exchangeOpen: document.getElementById(`edit-product-exchange-${productId}`).checked,
                 securePurchase: securePurchase,
                 shippingPayer: document.querySelector(`input[name="edit-shipping-payer-${productId}"]:checked`)?.value || 'buyer',
+                shippingCarrier: shippingCarrier,
                 shippingDesi: shippingDesi
             };
             if (Array.isArray(images)) payload.images = images;
@@ -4036,12 +4254,50 @@
         }
 
         async function requestProductFeatured(productId) {
-            const response = await fetch(`/api/request_product_featured/${productId}`, { method: 'POST' });
+            const packageDays = document.getElementById(`featured-package-${productId}`)?.value || '7';
+            const response = await fetch(`/api/request_product_featured/${productId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ packageDays })
+            });
             const result = await response.json();
             if (result.success) {
+                await fetchProducts(true);
+                await showDetails(productId);
                 showScreenNotice(result.message || "Öne çıkarma isteği gönderildi");
             } else {
                 showScreenNotice(result.message || "İstek gönderilemedi", "error");
+            }
+        }
+
+        async function startFeaturedPayment(requestId) {
+            const response = await fetch(`/api/featured_payments/create/${requestId}`, { method: 'POST' });
+            const result = await response.json();
+            if (!result.success) {
+                showScreenNotice(result.message || 'Öne çıkarma ödemesi başlatılamadı', 'error');
+                return;
+            }
+            if (result.paymentUrl) {
+                window.open(result.paymentUrl, '_blank', 'noopener,noreferrer');
+                showScreenNotice('PayTR ödeme ekranı açıldı');
+                return;
+            }
+            if (result.mockMode) {
+                showScreenNotice('Test ödeme modu hazır. Test Ödemeyi Tamamla butonunu kullanabilirsiniz.');
+                return;
+            }
+            showScreenNotice(result.message || 'Ödeme durumu güncellendi');
+        }
+
+        async function completeMockFeaturedPayment(requestId, productId) {
+            const response = await fetch(`/api/featured_payments/mock_complete/${requestId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                await fetchProducts(true);
+                await showDetails(productId);
+                showScreenNotice('Öne çıkarma test ödemesi tamamlandı');
+            } else {
+                showScreenNotice(result.message || 'Test ödeme tamamlanamadı', 'error');
             }
         }
 
@@ -4082,9 +4338,10 @@
             const result = await response.json();
             if (result.success) {
                 input.value = '';
-                showScreenNotice("İtiraz gönderildi");
+                await openProfileModal(false);
+                showScreenNotice("Destek talebi gönderildi");
             } else {
-                showScreenNotice(result.message || "İtiraz gönderilemedi", "error");
+                showScreenNotice(result.message || "Destek talebi gönderilemedi", "error");
             }
         }
 
@@ -4192,6 +4449,8 @@
             const enabled = document.getElementById('secure-purchase')?.checked;
             document.getElementById('secure-shipping-options')?.classList.toggle('hidden', !enabled);
             if (!enabled) {
+                const carrier = document.getElementById('new-shipping-carrier');
+                if (carrier) carrier.value = siteSettings.secure_shipping_carrier || '';
                 const desi = document.getElementById('new-shipping-desi');
                 if (desi) desi.value = '';
                 document.querySelectorAll('input[name="new-shipping-payer"]').forEach(input => input.checked = false);
@@ -4213,9 +4472,11 @@
             if (!value) return 'Kargo ödeme tarafı seçilmedi';
             return value === 'seller' ? 'Kargoyu satıcı öder' : 'Kargoyu alıcı öder';
         }
-        function getSecureShippingFeeFromSettings(desi) {
+        function getSecureShippingFeeFromSettings(desi, carrier = '') {
             const parsedDesi = parseInt(desi || 0);
-            const rates = siteSettings.secure_shipping_rates || {};
+            const carrierRates = siteSettings.secure_shipping_carrier_rates || {};
+            const selectedCarrier = carrier || document.getElementById('new-shipping-carrier')?.value || siteSettings.secure_shipping_carrier || '';
+            const rates = carrierRates[selectedCarrier] || siteSettings.secure_shipping_rates || {};
             const entries = Object.entries(rates)
                 .map(([key, value]) => [parseInt(key), parseInt(value)])
                 .filter(([key, value]) => key > 0 && value >= 0)
@@ -4226,6 +4487,21 @@
         }
         function formatTl(value) {
             return `${Number(value || 0).toLocaleString()} ₺`;
+        }
+        function renderFeaturedPackageOptions() {
+            const packages = siteSettings.featured_packages || {};
+            const entries = Object.entries(packages).sort((a, b) => Number(a[0]) - Number(b[0]));
+            if (!entries.length) return `<option value="7">7 gün - ${formatTl(siteSettings.featured_price || 0)}</option>`;
+            return entries.map(([days, price]) => `<option value="${escapeHtml(days)}">${escapeHtml(days)} gün - ${formatTl(price)}</option>`).join('');
+        }
+        function getFeaturedRequestStatusLabel(request) {
+            if (!request) return '';
+            if (request.status === 'rejected') return 'Reddedildi';
+            if (request.status === 'approved' && request.paymentStatus === 'paid') return 'Onaylandı ve ödendi';
+            if (request.status === 'approved') return 'Admin onayladı, ödeme bekliyor';
+            if (request.paymentStatus === 'paid') return 'Ödendi, admin onayı bekliyor';
+            if (request.paymentStatus === 'failed') return 'Ödeme başarısız';
+            return 'Admin onayı ve ödeme bekliyor';
         }
         function normalizeListingDuration(value) {
             const allowed = ['1', '7', '30', '90', '180'];
@@ -4296,7 +4572,8 @@
             const securePurchase = document.getElementById('secure-purchase').checked;
             const shippingPayer = getSelectedShippingPayer();
             const shippingDesi = document.getElementById('new-shipping-desi').value;
-            const shippingFee = securePurchase ? getSecureShippingFeeFromSettings(shippingDesi) : 0;
+            const shippingCarrier = document.getElementById('new-shipping-carrier').value || siteSettings.secure_shipping_carrier || '';
+            const shippingFee = securePurchase ? getSecureShippingFeeFromSettings(shippingDesi, shippingCarrier) : 0;
             const price = Number(document.getElementById('new-price').value || 0);
             const duration = Number(normalizeListingDuration(document.getElementById('new-duration-days').value));
             const files = getSelectedListingFiles();
@@ -4330,8 +4607,8 @@
                             <p class="text-2xl font-black text-orange-600">${Number(price || 0).toLocaleString()} ₺</p>
                             <p class="mt-2 text-[10px] font-bold text-gray-400"><i class="fa-solid fa-clock mr-1"></i>${getRemainingTime(endTime)}</p>
                             ${securePurchase ? `<div class="mt-3 rounded-xl bg-green-50 border border-green-100 p-3 text-[10px] font-black text-green-800">
-                                <p><i class="fa-solid fa-shield-halved mr-1"></i>Güvenli alışveriş açık</p>
-                                <p class="mt-1">Kargo: ${escapeHtml(siteSettings.secure_shipping_carrier || 'Anlaşmalı kargo')}</p>
+                                <p><i class="fa-solid fa-circle-check mr-1"></i>Güvenli alışveriş açık</p>
+                                <p class="mt-1">Kargo: ${escapeHtml(shippingCarrier || 'Anlaşmalı kargo')}</p>
                                 <p class="mt-1">${escapeHtml(getShippingPayerLabel(shippingPayer))}</p>
                                 <p class="mt-1">Desi: ${escapeHtml(shippingDesi || '-')} · Kargo ücreti: ${formatTl(shippingFee)}</p>
                                 <p class="mt-1">PayTR tahsilat tutarı: ${formatTl(price + (shippingPayer === 'buyer' ? shippingFee : 0))}</p>
@@ -4382,6 +4659,7 @@
                 exchangeOpen: document.getElementById('exchange-open').checked,
                 securePurchase: document.getElementById('secure-purchase').checked,
                 shippingPayer: getSelectedShippingPayer(),
+                shippingCarrier: document.getElementById('new-shipping-carrier').value,
                 shippingDesi: document.getElementById('new-shipping-desi').value,
                 startFromOne: document.getElementById('start-from-one').checked,
                 price: document.getElementById('new-price').value,
@@ -4412,6 +4690,7 @@
             const shippingPayer = draft.shippingPayer === 'seller' ? 'seller' : 'buyer';
             const shippingPayerInput = document.querySelector(`input[name="new-shipping-payer"][value="${shippingPayer}"]`);
             if (shippingPayerInput) shippingPayerInput.checked = true;
+            document.getElementById('new-shipping-carrier').value = draft.shippingCarrier || siteSettings.secure_shipping_carrier || '';
             document.getElementById('new-shipping-desi').value = draft.shippingDesi || '';
             toggleSecureShippingOptions();
             toggleShippingDesiSelect();
@@ -4432,8 +4711,10 @@
             if (!conditionInput.value) { showScreenNotice("Ürün durumunu seçmelisiniz", "error"); conditionInput.focus(); return; }
             const securePurchase = document.getElementById('secure-purchase').checked;
             const shippingPayer = getSelectedShippingPayer();
+            const shippingCarrierInput = document.getElementById('new-shipping-carrier');
             const shippingDesiInput = document.getElementById('new-shipping-desi');
             if (securePurchase && !shippingPayer) { showScreenNotice("Kargoyu kimin ödeyeceğini seçmelisiniz", "error"); return; }
+            if (securePurchase && !shippingCarrierInput.value) { showScreenNotice("Kargo firmasını seçmelisiniz", "error"); shippingCarrierInput.focus(); return; }
             if (securePurchase && !shippingDesiInput.value) { showScreenNotice("Kargo desisini seçmelisiniz", "error"); shippingDesiInput.focus(); return; }
 
             const imageInputs = Array.from(document.querySelectorAll('.new-img-input'));
@@ -4462,6 +4743,7 @@
                     exchangeOpen: document.getElementById('exchange-open').checked,
                     securePurchase: securePurchase,
                     shippingPayer: shippingPayer,
+                    shippingCarrier: shippingCarrierInput.value,
                     shippingDesi: shippingDesiInput.value,
                     startPrice: startPrice, 
                     startFromOne: startFromOne,

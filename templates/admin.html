@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verteklifi | Admin Paneli</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='brand/verteklifi-icon.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -216,6 +217,7 @@
                         <span class="bg-blue-50 text-blue-700 px-3 py-2 rounded-xl text-[10px] font-black">İtiraz: {{ stats.open_appeals }}</span>
                         <span class="bg-purple-50 text-purple-700 px-3 py-2 rounded-xl text-[10px] font-black">Öne istek: {{ stats.featured_requests }}</span>
                         <span class="bg-indigo-50 text-indigo-700 px-3 py-2 rounded-xl text-[10px] font-black">Vitrin: {{ stats.featured_products }}</span>
+                        <span class="bg-red-100 text-red-700 px-3 py-2 rounded-xl text-[10px] font-black">Riskli üye: {{ stats.high_risk_users }}</span>
                     </div>
                 </div>
                 <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto custom-scrollbar">
@@ -242,6 +244,8 @@
                                     {% elif task.report_id %}
                                         <button data-report-id="{{ task.report_id }}" onclick="markReportReviewingFromButton(this)" class="bg-orange-50 text-orange-700 px-2 py-1 rounded-lg text-[9px] font-black">İncele</button>
                                         <button data-report-id="{{ task.report_id }}" onclick="resolveReportFromButton(this)" class="bg-green-50 text-green-700 px-2 py-1 rounded-lg text-[9px] font-black">Kapat</button>
+                                    {% elif task.type == 'risk' %}
+                                        <button onclick="showHighRiskUsersQuick()" class="bg-red-50 text-red-700 px-2 py-1 rounded-lg text-[9px] font-black">Göster</button>
                                     {% endif %}
                                 </div>
                             </div>
@@ -279,41 +283,377 @@
         </div>
 
         {% if can_admin_settings %}
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
                 <div>
                     <h2 class="text-xl font-black text-gray-800 flex items-center">
                         <i class="fa-solid fa-wallet mr-3 text-green-600"></i>Finans Paneli
                     </h2>
-                    <p class="text-xs font-bold text-gray-400 mt-1">PayTR, komisyon, kargo ve satıcı aktarımı için hazırlık ekranı.</p>
+                    <p class="text-xs font-bold text-gray-400 mt-1">Tahsilat, komisyon, kargo ve satıcı aktarımı tek ekranda.</p>
                 </div>
-                <span class="bg-green-50 text-green-700 px-3 py-2 rounded-xl text-[10px] font-black">Ödeme iskeleti aktif</span>
+                <div class="flex flex-wrap gap-2">
+                    <a href="/admin/export/bids" class="bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-[10px] font-black transition"><i class="fa-solid fa-file-csv mr-1"></i>Teklif CSV</a>
+                    <a href="/admin/export/products" class="bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-[10px] font-black transition"><i class="fa-solid fa-box mr-1"></i>İlan CSV</a>
+                    <span class="bg-green-50 text-green-700 px-3 py-2 rounded-xl text-[10px] font-black"><i class="fa-solid fa-shield-halved mr-1"></i>Ödeme takibi aktif</span>
+                </div>
             </div>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                <div class="bg-green-50 rounded-2xl p-4"><p class="text-xl font-black text-green-700">{{ finance_summary.grossVolume }} ₺</p><p class="text-[10px] font-black text-green-800 uppercase">Toplam tahsilat</p></div>
-                <div class="bg-orange-50 rounded-2xl p-4"><p class="text-xl font-black text-orange-700">{{ finance_summary.shippingVolume }} ₺</p><p class="text-[10px] font-black text-orange-800 uppercase">Kargo hacmi</p></div>
-                <div class="bg-indigo-50 rounded-2xl p-4"><p class="text-xl font-black text-indigo-700">{{ finance_summary.platformFees }} ₺</p><p class="text-[10px] font-black text-indigo-800 uppercase">Platform geliri</p></div>
-                <div class="bg-blue-50 rounded-2xl p-4"><p class="text-xl font-black text-blue-700">{{ finance_summary.pendingPayout }} ₺</p><p class="text-[10px] font-black text-blue-800 uppercase">Bekleyen satıcı ödemesi</p></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+                <div class="rounded-2xl bg-green-50 border border-green-100 p-4">
+                    <p class="text-[10px] font-black text-green-700 uppercase">Toplam işlem hacmi</p>
+                    <p class="text-2xl font-black text-green-800 mt-1">{{ finance_summary.grossVolume }} ₺</p>
+                    <p class="text-[10px] font-bold text-green-600 mt-1">Ürün: {{ finance_summary.productVolume }} ₺ · Kargo: {{ finance_summary.shippingVolume }} ₺</p>
+                </div>
+                <div class="rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
+                    <p class="text-[10px] font-black text-indigo-700 uppercase">Platform geliri</p>
+                    <p class="text-2xl font-black text-indigo-800 mt-1">{{ finance_summary.platformFees }} ₺</p>
+                    <p class="text-[10px] font-bold text-indigo-600 mt-1">Bu ay: {{ finance_summary.monthRevenue }} ₺</p>
+                </div>
+                <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
+                    <p class="text-[10px] font-black text-blue-700 uppercase">Güvenli havuz</p>
+                    <p class="text-2xl font-black text-blue-800 mt-1">{{ finance_summary.escrowAmount }} ₺</p>
+                    <p class="text-[10px] font-bold text-blue-600 mt-1">{{ finance_summary.paidPaymentCount }} ödeme işlendi</p>
+                </div>
+                <div class="rounded-2xl bg-orange-50 border border-orange-100 p-4">
+                    <p class="text-[10px] font-black text-orange-700 uppercase">Satıcı aktarımı</p>
+                    <p class="text-2xl font-black text-orange-800 mt-1">{{ finance_summary.pendingPayout }} ₺</p>
+                    <p class="text-[10px] font-bold text-orange-600 mt-1">Talep: {{ finance_summary.requestedPayout }} ₺ · Hazır: {{ finance_summary.readyPayout }} ₺</p>
+                </div>
             </div>
-            <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-left min-w-[760px]">
-                    <thead><tr class="text-[10px] font-black text-gray-400 uppercase border-b"><th class="py-2">İlan</th><th>Alıcı</th><th>Satıcı</th><th>Durum</th><th>Alıcı toplam</th><th>Satıcı payı</th><th>Platform</th></tr></thead>
-                    <tbody>
-                        {% for payment in recent_payments %}
-                        <tr class="border-b border-gray-50 text-xs font-bold text-gray-600">
-                            <td class="py-3">{{ payment.product_title }}</td>
-                            <td>{{ payment.buyer_name }}</td>
-                            <td>{{ payment.seller_name }}</td>
-                            <td><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-[9px] font-black">{{ payment.status_label }}</span></td>
-                            <td>{{ payment.buyer_total }} ₺</td>
-                            <td>{{ payment.seller_payout }} ₺</td>
-                            <td>{{ payment.platform_fee }} ₺</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="7" class="py-8 text-center text-xs text-gray-400 italic">Henüz ödeme kaydı yok.</td></tr>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-5">
+                <div class="bg-gray-50 rounded-2xl p-3"><p class="text-lg font-black text-gray-800">{{ finance_summary.todayRevenue }} ₺</p><p class="text-[9px] font-black text-gray-500 uppercase">Bugün</p></div>
+                <div class="bg-gray-50 rounded-2xl p-3"><p class="text-lg font-black text-gray-800">{{ finance_summary.weekRevenue }} ₺</p><p class="text-[9px] font-black text-gray-500 uppercase">7 gün</p></div>
+                <div class="bg-gray-50 rounded-2xl p-3"><p class="text-lg font-black text-gray-800">{{ finance_summary.monthRevenue }} ₺</p><p class="text-[9px] font-black text-gray-500 uppercase">Bu ay</p></div>
+                <div class="bg-purple-50 rounded-2xl p-3"><p class="text-lg font-black text-purple-700">{{ finance_summary.revenueBreakdown.featured }} ₺</p><p class="text-[9px] font-black text-purple-700 uppercase">Öne çıkarma</p></div>
+                <div class="bg-indigo-50 rounded-2xl p-3"><p class="text-lg font-black text-indigo-700">{{ finance_summary.revenueBreakdown.commission }} ₺</p><p class="text-[9px] font-black text-indigo-700 uppercase">Komisyon</p></div>
+                <div class="bg-blue-50 rounded-2xl p-3"><p class="text-lg font-black text-blue-700">{{ finance_summary.revenueBreakdown.service }} ₺</p><p class="text-[9px] font-black text-blue-700 uppercase">İşlem ücreti</p></div>
+                <div class="bg-orange-50 rounded-2xl p-3"><p class="text-lg font-black text-orange-700">{{ finance_summary.revenueBreakdown.shipping }} ₺</p><p class="text-[9px] font-black text-orange-700 uppercase">Kargo</p></div>
+            </div>
+
+            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-3 mb-5">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <input id="finance-search" oninput="filterFinanceRows()" class="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-green-500" placeholder="İlan, alıcı veya satıcı ara">
+                    <select id="finance-status-filter" onchange="filterFinanceRows()" class="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-green-500">
+                        <option value="">Tüm durumlar</option>
+                        <option value="draft">Ödeme hazırlanıyor</option>
+                        <option value="pending">Ödeme bekleniyor</option>
+                        <option value="escrow">Para güvende</option>
+                        <option value="ready_for_payout">Aktarıma hazır</option>
+                        <option value="paid_out">Aktarıldı</option>
+                        <option value="cancelled">İptal</option>
+                    </select>
+                    <select id="finance-period-filter" onchange="filterFinanceRows()" class="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-green-500">
+                        <option value="">Tüm tarihler</option>
+                        <option value="today">Bugün</option>
+                        <option value="week">Son 7 gün</option>
+                        <option value="month">Bu ay</option>
+                    </select>
+                    <button onclick="clearFinanceFilters()" class="bg-white hover:bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-xs font-black text-gray-700 transition"><i class="fa-solid fa-rotate-left mr-1"></i>Filtreleri Temizle</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-5">
+                <div class="xl:col-span-3 rounded-2xl border border-gray-100 overflow-hidden">
+                    <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-black text-gray-800">Para Akışı</p>
+                            <p class="text-[10px] font-bold text-gray-400">Son ödeme kayıtları ve kesinti kalemleri</p>
+                        </div>
+                        <span class="text-[10px] font-black text-gray-400">{{ recent_payments | length }} kayıt</span>
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left min-w-[980px]">
+                            <thead>
+                                <tr class="text-[10px] font-black text-gray-400 uppercase border-b border-gray-100">
+                                    <th class="py-3 px-4">İlan</th>
+                                    <th>Taraflar</th>
+                                    <th>Durum</th>
+                                    <th>Alıcı toplam</th>
+                                    <th>Kesintiler</th>
+                                    <th>Satıcı payı</th>
+                                    <th>Tarih</th>
+                                    <th>Detay</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in recent_payments %}
+                                <tr class="finance-payment-row border-b border-gray-50 text-xs font-bold text-gray-600 hover:bg-gray-50" data-payment-id="{{ payment.id }}" data-status="{{ payment.status }}" data-created="{{ payment.created_at }}">
+                                    <td class="py-3 px-4 max-w-[220px]">
+                                        <p class="font-black text-gray-800 truncate">{{ payment.product_title }}</p>
+                                        <p class="text-[10px] text-gray-400">Ürün: {{ payment.product_amount }} ₺ · Kargo: {{ payment.shipping_fee }} ₺</p>
+                                    </td>
+                                    <td>
+                                        <p class="text-[10px] text-gray-500">Alıcı: <span class="font-black text-gray-700">{{ payment.buyer_name }}</span></p>
+                                        <p class="text-[10px] text-gray-500">Satıcı: <span class="font-black text-gray-700">{{ payment.seller_name }}</span></p>
+                                    </td>
+                                    <td><span class="{{ payment.status_class }} px-2 py-1 rounded-lg text-[9px] font-black">{{ payment.status_label }}</span></td>
+                                    <td class="font-black text-green-700">{{ payment.buyer_total }} ₺</td>
+                                    <td>
+                                        <p class="text-[10px] text-gray-500">Komisyon: {{ payment.commission_fee }} ₺</p>
+                                        <p class="text-[10px] text-gray-500">İşlem: {{ payment.service_fee }} ₺</p>
+                                        <p class="text-[10px] text-gray-500">Platform: {{ payment.platform_fee }} ₺</p>
+                                    </td>
+                                    <td class="font-black text-blue-700">{{ payment.seller_payout }} ₺</td>
+                                    <td class="text-[10px] text-gray-400">{{ payment.created_at }}</td>
+                                    <td>
+                                        <button data-payment-id="{{ payment.id }}" onclick="openFinanceDetailFromButton(this)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-xl text-[10px] font-black transition">Aç</button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="8" class="py-10 text-center text-xs text-gray-400 italic">Henüz ödeme kaydı yok.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <p class="text-sm font-black text-gray-800 mb-3">Finans Uyarıları</p>
+                    <div class="space-y-2">
+                        {% for alert in finance_alerts %}
+                        <div class="bg-white border {% if alert.tone == 'red' %}border-red-100{% elif alert.tone == 'yellow' %}border-yellow-100{% elif alert.tone == 'orange' %}border-orange-100{% elif alert.tone == 'green' %}border-green-100{% else %}border-blue-100{% endif %} rounded-xl p-3">
+                            <p class="text-xs font-black {% if alert.tone == 'red' %}text-red-700{% elif alert.tone == 'yellow' %}text-yellow-700{% elif alert.tone == 'orange' %}text-orange-700{% elif alert.tone == 'green' %}text-green-700{% else %}text-blue-700{% endif %}"><i class="fa-solid {{ alert.icon }} mr-1"></i>{{ alert.title }}</p>
+                            <p class="text-[10px] font-bold text-gray-500 mt-1">{{ alert.text }}</p>
+                        </div>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                    <div class="mt-4 bg-white border border-indigo-100 rounded-xl p-3">
+                        <p class="text-xs font-black text-indigo-900 mb-2">PayTR Durumu</p>
+                        <p class="text-[10px] font-bold text-indigo-700">Bağlantı: <span class="font-black">{{ 'Hazır' if paytr_status.configured else 'Test modu / anahtar bekliyor' }}</span></p>
+                        <p class="text-[10px] font-bold text-indigo-700">Test modu: <span class="font-black">{{ paytr_status.test_mode }}</span></p>
+                        <p class="text-[9px] font-bold text-indigo-500 break-all mt-1">{{ paytr_status.callback_url }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                <div class="xl:col-span-2 rounded-2xl border border-green-100 bg-green-50 p-4">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <p class="text-sm font-black text-green-900">Satıcı Ödeme Kuyruğu</p>
+                            <p class="text-[10px] font-bold text-green-700">Aktarıma hazır ve talep edilmiş ödemeler</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="bulkPayoutAction('approve')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-xl text-[10px] font-black transition">Seçili Aktarıldı</button>
+                            <button onclick="bulkPayoutAction('reject')" class="bg-gray-800 hover:bg-black text-white px-3 py-2 rounded-xl text-[10px] font-black transition">Seçili Beklet</button>
+                            <span class="text-[10px] font-black text-green-700 bg-white px-3 py-2 rounded-xl">{{ payout_requests | length }} kayıt</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+                        {% for payout in payout_requests %}
+                        <div id="payout-row-{{ payout.id }}" class="bg-white border border-green-100 rounded-xl p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <input type="checkbox" class="payout-select accent-green-700" value="{{ payout.id }}">
+                                    <p class="text-sm font-black text-gray-800 truncate">{{ payout.seller_name }}</p>
+                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-[9px] font-black">{{ payout.status_label }}</span>
+                                    <span class="bg-gray-100 text-gray-500 px-2 py-1 rounded-lg text-[9px] font-black">{{ payout.wait_days }} gün</span>
+                                </div>
+                                <p class="text-[10px] font-bold text-gray-500 truncate mt-1">{{ payout.product_title }}</p>
+                                <p class="text-[10px] font-bold text-green-700 break-all">{{ payout.seller_iban_masked or 'IBAN yok' }}</p>
+                                <p class="text-[9px] font-black text-gray-400">{{ payout.created_at }}</p>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 shrink-0">
+                                <span class="text-lg font-black text-green-700 sm:mr-2">{{ payout.amount }} ₺</span>
+                                <button data-payout-id="{{ payout.id }}" data-payout-action="approve" onclick="updatePayoutFromButton(this)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-[10px] font-black">Aktarıldı</button>
+                                <button data-payout-id="{{ payout.id }}" data-payout-action="reject" onclick="updatePayoutFromButton(this)" class="bg-gray-700 hover:bg-black text-white px-3 py-2 rounded-lg text-[10px] font-black">Beklet</button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-xs text-green-700 font-bold bg-white/70 rounded-xl p-3">Aktarım bekleyen satıcı talebi yok.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <p class="text-sm font-black text-gray-800 mb-3">Son Hareketler</p>
+                    <div class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+                        {% for tx in payment_transactions[:8] %}
+                        <div class="bg-white border border-gray-100 rounded-xl p-3 flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-xs font-black text-gray-800 truncate">{{ tx.product_title }}</p>
+                                <p class="text-[10px] font-bold text-gray-400">{{ tx.type_label }} · {{ tx.status }}</p>
+                                <p class="text-[9px] font-bold text-gray-300">{{ tx.created_at }}</p>
+                            </div>
+                            <span class="text-xs font-black text-indigo-700 shrink-0">{{ tx.amount }} ₺</span>
+                        </div>
+                        {% else %}
+                        <p class="text-xs text-gray-400 italic">Henüz ödeme hareketi yok.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {% if payment_errors %}
+            <div class="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4">
+                <p class="text-sm font-black text-red-900 mb-3">Ödeme / Callback Hataları</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                    {% for error in payment_errors[:6] %}
+                    <div class="bg-white border border-red-100 rounded-xl p-3">
+                        <p class="text-xs font-black text-red-800">{{ error.source }}</p>
+                        <p class="text-[11px] font-bold text-gray-600 break-words">{{ error.message }}</p>
+                        <p class="text-[9px] font-black text-gray-400">{{ error.created_at }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if can_admin_settings %}
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-800 flex items-center"><i class="fa-solid fa-heart-pulse mr-3 text-emerald-600"></i>Sistem Sağlığı</h2>
+                        <p class="text-xs font-bold text-gray-400 mt-1">Veritabanı, görsel depolama, yedek ve ödeme uyarıları.</p>
+                    </div>
+                    <span class="bg-emerald-50 text-emerald-700 px-3 py-2 rounded-xl text-[10px] font-black">{{ system_health.pendingJobs }} açık iş</span>
+                </div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                    <div class="bg-gray-50 rounded-2xl p-3"><p class="text-xl font-black text-gray-800">{{ system_health.databaseSizeMb }}</p><p class="text-[9px] font-black text-gray-500 uppercase">DB MB</p></div>
+                    <div class="bg-orange-50 rounded-2xl p-3"><p class="text-xl font-black text-orange-700">{{ system_health.uploadCount }}</p><p class="text-[9px] font-black text-orange-700 uppercase">Görsel</p></div>
+                    <div class="bg-indigo-50 rounded-2xl p-3"><p class="text-xl font-black text-indigo-700">{{ system_health.backupCount }}</p><p class="text-[9px] font-black text-indigo-700 uppercase">Yedek</p></div>
+                    <div class="bg-red-50 rounded-2xl p-3"><p class="text-xl font-black text-red-700">{{ system_health.paymentErrors7d }}</p><p class="text-[9px] font-black text-red-700 uppercase">7 gün hata</p></div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 p-3">
+                        <span class="text-xs font-black text-gray-700">Upload alanı</span>
+                        <span class="text-xs font-black text-gray-500">{{ system_health.uploadSizeMb }} MB</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 p-3">
+                        <span class="text-xs font-black text-gray-700">Son yedek</span>
+                        <span class="text-xs font-black text-gray-500">{{ system_health.latestBackup or 'Yedek yok' }}</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div class="rounded-xl p-3 {% if system_health.paytrConfigured %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %} text-xs font-black"><i class="fa-solid {% if system_health.paytrConfigured %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} mr-1"></i>PayTR</div>
+                        <div class="rounded-xl p-3 {% if system_health.secureCookie %}bg-green-50 text-green-700{% else %}bg-yellow-50 text-yellow-700{% endif %} text-xs font-black"><i class="fa-solid fa-cookie-bite mr-1"></i>Cookie</div>
+                        <div class="rounded-xl p-3 {% if system_health.maintenanceMode %}bg-yellow-50 text-yellow-700{% else %}bg-green-50 text-green-700{% endif %} text-xs font-black"><i class="fa-solid fa-screwdriver-wrench mr-1"></i>Bakım modu</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-800 flex items-center"><i class="fa-solid fa-truck-fast mr-3 text-orange-600"></i>Kargo Alarm Merkezi</h2>
+                        <p class="text-xs font-bold text-gray-400 mt-1">Takip kodu eksik, geciken ve güncelleme bekleyen işlemler.</p>
+                    </div>
+                    <span class="bg-orange-50 text-orange-700 px-3 py-2 rounded-xl text-[10px] font-black">{{ shipping_alerts | length }} alarm</span>
+                </div>
+                <div class="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
+                    {% for alert in shipping_alerts %}
+                    <div class="border {% if alert.tone == 'red' %}border-red-100 bg-red-50{% elif alert.tone == 'orange' %}border-orange-100 bg-orange-50{% else %}border-blue-100 bg-blue-50{% endif %} rounded-xl p-3 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-gray-800 truncate">{{ alert.title }}</p>
+                            <p class="text-[11px] font-bold text-gray-600 break-words">{{ alert.text }}</p>
+                            <p class="text-[9px] font-black text-gray-400">{{ alert.buyer }} · {{ alert.createdAt }}</p>
+                        </div>
+                        <button data-anchor="admin-order-row-{{ alert.productId }}" onclick="scrollToAdminAnchorFromButton(this)" class="bg-white text-gray-700 px-3 py-2 rounded-xl text-[10px] font-black shrink-0">Siparişe Git</button>
+                    </div>
+                    {% else %}
+                    <p class="text-xs text-gray-400 italic bg-gray-50 rounded-xl p-3">Kargo tarafında acil alarm yok.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-800 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-3 text-red-600"></i>Risk Merkezi</h2>
+                        <p class="text-xs font-bold text-gray-400 mt-1">Riskli kullanıcı, şüpheli ilan ve ödeme hatalarını tek yerde gösterir.</p>
+                    </div>
+                    <span class="bg-red-50 text-red-700 px-3 py-2 rounded-xl text-[10px] font-black">{{ risk_center.openReports }} açık kayıt</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-red-50 rounded-2xl p-3"><p class="text-xl font-black text-red-700">{{ risk_center.users | length }}</p><p class="text-[9px] font-black text-red-700 uppercase">Riskli üye</p></div>
+                    <div class="bg-orange-50 rounded-2xl p-3"><p class="text-xl font-black text-orange-700">{{ risk_center.products | length }}</p><p class="text-[9px] font-black text-orange-700 uppercase">Şüpheli ilan</p></div>
+                </div>
+                <div class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+                    {% for risk_user in risk_center.users %}
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-gray-800 truncate">{{ risk_user.name }}</p>
+                            <p class="text-[10px] font-bold text-gray-400">Skor {{ risk_user.score }} · Rapor {{ risk_user.reports }} · Uyarı {{ risk_user.warnings }}</p>
+                        </div>
+                        <button data-user-id="{{ risk_user.id }}" onclick="focusUserFromButton(this)" class="bg-red-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Aç</button>
+                    </div>
+                    {% endfor %}
+                    {% for risk_product in risk_center.products %}
+                    <div class="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-gray-800 truncate">{{ risk_product.title }}</p>
+                            <p class="text-[10px] font-bold text-orange-700">Rapor {{ risk_product.reports }}{% if risk_product.hidden %} · Gizli{% endif %}{% if risk_product.imageFlagged %} · Görsel işaretli{% endif %}</p>
+                        </div>
+                        <button data-product-id="{{ risk_product.id }}" onclick="focusProductFromButton(this)" class="bg-orange-600 text-white px-3 py-2 rounded-xl text-[10px] font-black">Aç</button>
+                    </div>
+                    {% endfor %}
+                    {% if not risk_center.users and not risk_center.products %}
+                    <p class="text-xs text-gray-400 italic bg-gray-50 rounded-xl p-3">Şu an risk merkezinde acil kayıt yok.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-800 flex items-center"><i class="fa-solid fa-headset mr-3 text-blue-600"></i>Destek / İtiraz Merkezi</h2>
+                        <p class="text-xs font-bold text-gray-400 mt-1">Destek talepleri, şikayetler ve satış itirazları birlikte görünür.</p>
+                    </div>
+                    <span class="bg-blue-50 text-blue-700 px-3 py-2 rounded-xl text-[10px] font-black">{{ support_center | length }} kayıt</span>
+                </div>
+                <div class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+                    {% for item in support_center %}
+                    <div class="border {% if item.tone == 'red' %}border-red-100 bg-red-50{% elif item.tone == 'orange' %}border-orange-100 bg-orange-50{% else %}border-blue-100 bg-blue-50{% endif %} rounded-xl p-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <span class="inline-flex px-2 py-1 rounded-lg text-[9px] font-black bg-white text-gray-700">{{ item.kind }}</span>
+                                <p class="text-sm font-black text-gray-800 mt-2 truncate">{{ item.title }}</p>
+                                <p class="text-[11px] font-bold text-gray-600 mt-1 break-words">{{ item.text }}</p>
+                                <p class="text-[9px] font-black text-gray-400 mt-1">{{ item.createdAt }}</p>
+                            </div>
+                            <button data-anchor="{{ item.anchor }}" onclick="scrollToAdminAnchorFromButton(this)" class="bg-white text-gray-700 px-3 py-2 rounded-xl text-[10px] font-black shrink-0">Git</button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-xs text-gray-400 italic bg-gray-50 rounded-xl p-3">Açık destek veya itiraz kaydı yok.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if can_admin_settings %}
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <h2 class="text-xl font-black text-gray-800 flex items-center mb-4"><i class="fa-solid fa-broom mr-3 text-teal-600"></i>Veri Temizlik Paneli</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="runDataCleanup('notifications')" class="text-left bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-teal-700">{{ cleanup_summary.oldNotifications }}</p><p class="text-[10px] font-black text-teal-800 uppercase">Eski okunmuş bildirim</p></button>
+                    <button onclick="runDataCleanup('logs')" class="text-left bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-gray-700">{{ cleanup_summary.oldAdminLogs }}</p><p class="text-[10px] font-black text-gray-700 uppercase">90+ gün admin logu</p></button>
+                    <button onclick="runDataCleanup('payment_errors')" class="text-left bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-red-700">{{ cleanup_summary.oldPaymentErrors }}</p><p class="text-[10px] font-black text-red-700 uppercase">Eski ödeme hatası</p></button>
+                    <button onclick="runDataCleanup('orphan_uploads')" class="text-left bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-orange-700">{{ cleanup_summary.orphanUploads }}</p><p class="text-[10px] font-black text-orange-700 uppercase">Sahipsiz görsel</p></button>
+                    <button onclick="runDataCleanup('backups')" class="sm:col-span-2 text-left bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-2xl p-4 transition"><p class="text-2xl font-black text-indigo-700">{{ cleanup_summary.oldBackups }}</p><p class="text-[10px] font-black text-indigo-700 uppercase">Süresi dolan yedek</p></button>
+                </div>
+                <p id="data-cleanup-result" class="hidden mt-3 text-[11px] font-black"></p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <h2 class="text-xl font-black text-gray-800 flex items-center mb-4"><i class="fa-solid fa-rocket mr-3 text-purple-600"></i>Yayın Öncesi Kontrol</h2>
+                <div class="space-y-2">
+                    {% for item in launch_checklist %}
+                    <div class="flex items-start gap-3 rounded-xl border {% if item.ok %}border-green-100 bg-green-50{% else %}border-red-100 bg-red-50{% endif %} p-3">
+                        <i class="fa-solid {% if item.ok %}fa-circle-check text-green-600{% else %}fa-circle-exclamation text-red-600{% endif %} mt-0.5"></i>
+                        <div>
+                            <p class="text-xs font-black text-gray-800">{{ item.label }}</p>
+                            <p class="text-[10px] font-bold text-gray-500">{{ item.detail }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
         {% endif %}
@@ -376,6 +716,22 @@
                     <p class="text-[10px] font-bold text-indigo-800 mt-1">Kategori sırası ve içerikler.</p>
                 </a>
             </div>
+            {% if can_admin_settings %}
+            <div class="mt-4 rounded-2xl border border-purple-100 bg-purple-50 p-4">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-black text-purple-900"><i class="fa-solid fa-vial-circle-check mr-2"></i>Admin Deneme Modu</p>
+                        <p class="text-[11px] font-bold text-purple-700 mt-1">PayTR, güvenli satış, kargo ve sipariş takibini gerçek kullanıcılara dokunmadan test eder.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
+                        <button onclick="runAdminDemo('create')" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-2 rounded-xl text-[10px] font-black">Demo Satış Oluştur</button>
+                        <button onclick="runAdminDemo('pay')" class="bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-xl text-[10px] font-black">Demo Ödeme Al</button>
+                        <button onclick="runAdminDemo('ship')" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-xl text-[10px] font-black">Demo Kargo Gir</button>
+                    </div>
+                </div>
+                <p id="admin-demo-result" class="hidden mt-3 text-[11px] font-black"></p>
+            </div>
+            {% endif %}
         </div>
 
         {% if can_admin_settings %}
@@ -398,6 +754,7 @@
                                 <div class="min-w-0">
                                     <span class="inline-flex rounded-full {% if request.status == 'pending' %}bg-indigo-100 text-indigo-700{% elif request.status == 'approved' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %} px-2 py-1 text-[9px] font-black">{{ request.status_label }}</span>
                                     <span class="inline-flex rounded-full bg-green-50 text-green-700 px-2 py-1 text-[9px] font-black ml-1">{{ request.payment_amount }} ₺ · {{ request.payment_status }}</span>
+                                    <span class="inline-flex rounded-full bg-indigo-900 text-white px-2 py-1 text-[9px] font-black ml-1">{{ request.package_days }} gün</span>
                                     <p class="mt-2 text-sm font-black text-gray-800 break-words">{{ request.product_title }}</p>
                                     <p class="text-[10px] font-bold text-gray-400 mt-1">{{ request.user_name }} | {{ request.created_at }}</p>
                                     {% if request.admin_response %}
@@ -540,6 +897,11 @@
                                 <span class="text-xs font-black text-gray-500">TL</span>
                             </div>
                         </label>
+                        <label class="block rounded-2xl bg-indigo-50 border border-indigo-100 p-3">
+                            <span class="block text-[10px] font-black text-indigo-700 uppercase">Öne çıkarma paketleri</span>
+                            <span class="block text-[11px] font-bold text-indigo-500 mb-2">Gün: fiyat şeklinde JSON girilir.</span>
+                            <textarea id="setting-featured-packages" class="w-full border border-indigo-100 rounded-xl p-3 text-xs leading-relaxed h-28 custom-scrollbar bg-white" placeholder='{"1":10,"7":50,"30":150}'>{{ settings.featured_packages_text }}</textarea>
+                        </label>
                         <label class="flex items-center justify-between gap-3 text-sm font-bold text-gray-600 bg-gray-50 rounded-2xl border border-gray-100 p-3">
                             <span>
                                 <span class="block text-[10px] font-black text-gray-500 uppercase">Bakım modu</span>
@@ -585,11 +947,20 @@
                             <input id="setting-secure-shipping-carrier" value="{{ settings.secure_shipping_carrier }}" class="border border-green-100 rounded-xl p-3 text-sm bg-white" placeholder="Anlaşmalı kargo firması">
                             <textarea id="setting-secure-shipping-rates" class="border border-green-100 rounded-xl p-3 text-xs leading-relaxed h-32 custom-scrollbar bg-white" placeholder='{"1":65,"2":75}'>{{ settings.secure_shipping_rates_text }}</textarea>
                         </div>
+                        <label class="block mt-2">
+                            <span class="block text-[10px] font-black text-green-700 mb-1">Firma bazlı desi fiyatları</span>
+                            <textarea id="setting-secure-shipping-carrier-rates" class="w-full border border-green-100 rounded-xl p-3 text-xs leading-relaxed h-44 custom-scrollbar bg-white" placeholder='{"PTT Kargo":{"1":60,"2":70}}'>{{ settings.secure_shipping_carrier_rates_text }}</textarea>
+                        </label>
                     </div>
                     <label class="block rounded-2xl bg-gray-50 border border-gray-100 p-3">
                         <span class="block text-[10px] font-black text-gray-500 uppercase">KVKK metni</span>
                         <span class="block text-[11px] font-bold text-gray-400 mb-2">Üye olurken görünen metin buradan yönetilir.</span>
                         <textarea id="setting-kvkk-text" class="w-full border border-gray-200 rounded-xl p-3 text-xs leading-relaxed h-40 custom-scrollbar" placeholder="KVKK metni">{{ settings.kvkk_text }}</textarea>
+                    </label>
+                    <label class="block rounded-2xl bg-green-50 border border-green-100 p-3">
+                        <span class="block text-[10px] font-black text-green-700 uppercase">Satış ve ödeme şartları</span>
+                        <span class="block text-[11px] font-bold text-green-600 mb-2">Üye olurken ve güvenli alışveriş akışında kabul ettirilen metin.</span>
+                        <textarea id="setting-sales-terms-text" class="w-full border border-green-100 rounded-xl p-3 text-xs leading-relaxed h-40 custom-scrollbar bg-white" placeholder="Satış ve ödeme şartları">{{ settings.sales_terms_text }}</textarea>
                     </label>
                     <button onclick="saveSettings()" class="w-full bg-indigo-900 hover:bg-black text-white py-3 rounded-xl text-sm font-black transition">Ayarları Kaydet</button>
                     <div class="grid grid-cols-3 gap-2 pt-2">
@@ -776,6 +1147,16 @@
                                 <label class="bg-white border border-gray-100 rounded-xl px-2 py-2 text-[10px] font-black text-gray-600"><input id="admin-order-delivered-{{ order.id }}" type="checkbox" {% if order.progress.delivered %}checked{% endif %} class="accent-indigo-900 mr-1">Teslim</label>
                                 <label class="bg-white border border-gray-100 rounded-xl px-2 py-2 text-[10px] font-black text-gray-600"><input id="admin-order-paid-{{ order.id }}" type="checkbox" {% if order.progress.paid %}checked{% endif %} class="accent-indigo-900 mr-1">Ödeme</label>
                             </div>
+                            {% if order.tracking_events %}
+                            <div class="mt-3 bg-white border border-gray-100 rounded-xl p-3">
+                                <p class="text-[10px] font-black text-gray-500 uppercase mb-2">Kargo geçmişi</p>
+                                <div class="space-y-1">
+                                    {% for event in order.tracking_events[:3] %}
+                                        <p class="text-[10px] font-bold text-gray-600">{{ event.createdAt }} · {{ event.statusLabel }}{% if event.carrier %} · {{ event.carrier }}{% endif %}{% if event.trackingCode %} · {{ event.trackingCode }}{% endif %}</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
                             <button data-order-id="{{ order.id }}" onclick="updateAdminOrderFromButton(this)" class="mt-3 w-full bg-indigo-900 hover:bg-black text-white px-3 py-2 rounded-xl text-[10px] font-black transition">Takibi Kaydet</button>
                         </div>
                         {% endfor %}
@@ -883,6 +1264,14 @@
                                         {% endif %}
                                         {% if report.reported_user_id %}
                                             <button data-user-id="{{ report.reported_user_id }}" onclick="banReportedUserFromButton(this)" class="bg-gray-800 hover:bg-black text-white px-3 py-2 rounded-lg text-[10px] font-black">Kullanıcıyı Banla</button>
+                                        {% endif %}
+                                        {% if report.target_type == 'sale' and report.product_id %}
+                                            <button data-report-id="{{ report.id }}" data-dispute-decision="refund" onclick="decideSaleDisputeFromButton(this)" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-[10px] font-black">İade Et</button>
+                                            <button data-report-id="{{ report.id }}" data-dispute-decision="release" onclick="decideSaleDisputeFromButton(this)" class="bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-lg text-[10px] font-black">Satıcıya Aktar</button>
+                                            <div class="flex items-center gap-1 bg-white border border-purple-100 rounded-lg p-1">
+                                                <input id="partial-refund-{{ report.id }}" type="number" min="1" class="w-20 px-2 py-1 text-[10px] font-bold outline-none" placeholder="TL">
+                                                <button data-report-id="{{ report.id }}" data-dispute-decision="partial_refund" onclick="decideSaleDisputeFromButton(this)" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-md text-[9px] font-black">Kısmi İade</button>
+                                            </div>
                                         {% endif %}
                                         <button data-report-id="{{ report.id }}" onclick="markReportReviewingFromButton(this)" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg text-[10px] font-black">İncelemede</button>
                                         <button data-report-id="{{ report.id }}" onclick="rejectReportFromButton(this)" class="bg-gray-700 hover:bg-black text-white px-3 py-2 rounded-lg text-[10px] font-black">Reddet</button>
@@ -1248,6 +1637,21 @@
         </div>
     </div>
 
+    <div id="finance-detail-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[140] p-4 backdrop-blur-sm" onclick="if (event.target === this) closeFinanceDetail()">
+        <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <h2 class="text-xl font-black text-gray-900 flex items-center"><i class="fa-solid fa-receipt mr-3 text-green-600"></i>Finans Detayı</h2>
+                    <p id="finance-detail-subtitle" class="text-xs font-bold text-gray-400 truncate">Ödeme kaydı yükleniyor...</p>
+                </div>
+                <button onclick="closeFinanceDetail()" class="text-gray-400 hover:text-red-600 text-2xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="finance-detail-content" class="p-5 overflow-y-auto custom-scrollbar">
+                <div class="py-12 text-center text-sm font-black text-gray-400">Yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+
     <script type="application/json" id="admin-users-data">{{ users | tojson }}</script>
     <script type="application/json" id="admin-page-state">{{ {"canManage": can_manage, "canAdminSettings": can_admin_settings} | tojson }}</script>
     <script type="application/json" id="admin-category-menu-data">{{ category_menu | tojson }}</script>
@@ -1355,6 +1759,217 @@
 
         function resolveAppealFromButton(button) {
             resolveAppeal(Number(button.dataset.appealId));
+        }
+
+        function updatePayoutFromButton(button) {
+            updatePayout(Number(button.dataset.payoutId), button.dataset.payoutAction);
+        }
+
+        function decideSaleDisputeFromButton(button) {
+            decideSaleDispute(Number(button.dataset.reportId), button.dataset.disputeDecision);
+        }
+
+        function openFinanceDetailFromButton(button) {
+            openFinanceDetail(Number(button.dataset.paymentId));
+        }
+
+        function focusUserFromButton(button) {
+            const row = document.getElementById(`user-row-${button.dataset.userId}`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.classList.add('ring-4', 'ring-red-200');
+                setTimeout(() => row.classList.remove('ring-4', 'ring-red-200'), 1800);
+            }
+        }
+
+        function focusProductFromButton(button) {
+            const row = document.getElementById(`admin-product-row-${button.dataset.productId}`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.classList.add('ring-4', 'ring-orange-200');
+                setTimeout(() => row.classList.remove('ring-4', 'ring-orange-200'), 1800);
+            }
+        }
+
+        function scrollToAdminAnchorFromButton(button) {
+            const target = document.getElementById(button.dataset.anchor);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('ring-4', 'ring-blue-200');
+                setTimeout(() => target.classList.remove('ring-4', 'ring-blue-200'), 1800);
+            }
+        }
+
+        function filterFinanceRows() {
+            const search = (document.getElementById('finance-search')?.value || '').toLowerCase().trim();
+            const status = document.getElementById('finance-status-filter')?.value || '';
+            const period = document.getElementById('finance-period-filter')?.value || '';
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            document.querySelectorAll('.finance-payment-row').forEach(row => {
+                const textMatch = !search || row.textContent.toLowerCase().includes(search);
+                const statusMatch = !status || row.dataset.status === status;
+                let periodMatch = true;
+                if (period) {
+                    const created = new Date((row.dataset.created || '').replace(' ', 'T'));
+                    if (period === 'today') periodMatch = created >= todayStart;
+                    if (period === 'week') periodMatch = created >= weekStart;
+                    if (period === 'month') periodMatch = created >= monthStart;
+                }
+                row.classList.toggle('hidden', !(textMatch && statusMatch && periodMatch));
+            });
+        }
+
+        function clearFinanceFilters() {
+            ['finance-search', 'finance-status-filter', 'finance-period-filter'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            filterFinanceRows();
+        }
+
+        function closeFinanceDetail() {
+            const modal = document.getElementById('finance-detail-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function adminMoney(value) {
+            return `${Number(value || 0).toLocaleString('tr-TR')} ₺`;
+        }
+
+        function renderFinanceTimeline(events) {
+            if (!events || !events.length) {
+                return '<p class="text-xs text-gray-400 italic bg-gray-50 rounded-xl p-3">Henüz zaman çizelgesi yok.</p>';
+            }
+            return events.map(event => `
+                <div class="relative pl-8 pb-4 last:pb-0">
+                    <span class="absolute left-0 top-0 w-5 h-5 rounded-full bg-white border-2 ${event.tone === 'red' ? 'border-red-300 text-red-600' : event.tone === 'green' ? 'border-green-300 text-green-600' : event.tone === 'orange' ? 'border-orange-300 text-orange-600' : event.tone === 'teal' ? 'border-teal-300 text-teal-600' : 'border-indigo-300 text-indigo-600'} flex items-center justify-center text-[9px]"><i class="fa-solid ${adminEscapeHtml(event.icon || 'fa-circle')}"></i></span>
+                    <span class="absolute left-[9px] top-6 bottom-0 w-px bg-gray-100"></span>
+                    <p class="text-xs font-black text-gray-800">${adminEscapeHtml(event.title)}</p>
+                    <p class="text-[10px] font-bold text-gray-500 break-words">${adminEscapeHtml(event.text || '')}</p>
+                    <p class="text-[9px] font-black text-gray-400">${adminEscapeHtml(event.createdAt)}</p>
+                </div>
+            `).join('');
+        }
+
+        function renderFinanceDetail(payment) {
+            const amountClassMap = {
+                green: 'bg-green-50 border-green-100 text-green-700 text-green-800',
+                gray: 'bg-gray-50 border-gray-100 text-gray-700 text-gray-800',
+                orange: 'bg-orange-50 border-orange-100 text-orange-700 text-orange-800',
+                indigo: 'bg-indigo-50 border-indigo-100 text-indigo-700 text-indigo-800',
+                blue: 'bg-blue-50 border-blue-100 text-blue-700 text-blue-800',
+                red: 'bg-red-50 border-red-100 text-red-700 text-red-800'
+            };
+            const amountCards = [
+                ['Alıcı toplam', payment.amounts.buyerTotal, 'green'],
+                ['Ürün tutarı', payment.amounts.productAmount, 'gray'],
+                ['Kargo', payment.amounts.shippingFee, 'orange'],
+                ['Platform geliri', payment.amounts.platformTotalFee, 'indigo'],
+                ['Satıcı payı', payment.amounts.sellerPayout, 'blue'],
+                ['Satıcı kargo borcu', payment.amounts.sellerShippingDebt, 'red']
+            ].map(([label, value, color]) => {
+                const classes = amountClassMap[color] || amountClassMap.gray;
+                const [bgClass, borderClass, labelClass, valueClass] = classes.split(' ');
+                return `
+                <div class="rounded-2xl p-4 ${bgClass} border ${borderClass}">
+                    <p class="text-[10px] font-black ${labelClass} uppercase">${label}</p>
+                    <p class="text-xl font-black ${valueClass} mt-1">${adminMoney(value)}</p>
+                </div>
+            `;
+            }).join('');
+
+            const transactions = (payment.transactions || []).map(tx => `
+                <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-xs font-black text-gray-800">${adminEscapeHtml(tx.type)} · ${adminEscapeHtml(tx.status)}</p>
+                        <p class="text-[10px] font-bold text-gray-400 truncate">${adminEscapeHtml(tx.providerReference || tx.provider || '')}</p>
+                        <p class="text-[9px] font-black text-gray-400">${adminEscapeHtml(tx.createdAt)}</p>
+                    </div>
+                    <span class="text-xs font-black text-indigo-700 shrink-0">${adminMoney(tx.amount)}</span>
+                </div>
+            `).join('') || '<p class="text-xs text-gray-400 italic bg-gray-50 rounded-xl p-3">Hareket kaydı yok.</p>';
+
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="lg:col-span-2 space-y-5">
+                        <div class="rounded-2xl border border-gray-100 p-4">
+                            <div class="flex items-start gap-4">
+                                ${payment.product.image ? `<img src="${adminEscapeHtml(payment.product.image)}" class="w-20 h-20 object-cover rounded-xl border border-gray-100">` : ''}
+                                <div class="min-w-0">
+                                    <p class="text-lg font-black text-gray-900 break-words">${adminEscapeHtml(payment.product.title)}</p>
+                                    <p class="text-xs font-bold text-gray-500">Durum: ${adminEscapeHtml(payment.statusLabel)} · İlan: ${adminEscapeHtml(payment.product.statusLabel || payment.product.status)}</p>
+                                    <p class="text-[10px] font-bold text-gray-400">Referans: ${adminEscapeHtml(payment.providerReference || 'Henüz yok')}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">${amountCards}</div>
+                        <div class="rounded-2xl border border-gray-100 p-4">
+                            <p class="text-sm font-black text-gray-800 mb-3">İşlem Zaman Çizelgesi</p>
+                            <div class="max-h-96 overflow-y-auto custom-scrollbar">${renderFinanceTimeline(payment.timeline)}</div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="rounded-2xl border border-gray-100 p-4">
+                            <p class="text-sm font-black text-gray-800 mb-3">Taraflar</p>
+                            <div class="space-y-3">
+                                <div class="bg-gray-50 rounded-xl p-3">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase">Alıcı</p>
+                                    <p class="text-sm font-black text-gray-800">${adminEscapeHtml(payment.buyer.name)}</p>
+                                    <p class="text-[10px] font-bold text-gray-500 break-all">${adminEscapeHtml(payment.buyer.email || '')}</p>
+                                    <p class="text-[10px] font-bold text-gray-500">${adminEscapeHtml(payment.buyer.phone || '')}</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-xl p-3">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase">Satıcı</p>
+                                    <p class="text-sm font-black text-gray-800">${adminEscapeHtml(payment.seller.name)}</p>
+                                    <p class="text-[10px] font-bold text-gray-500 break-all">${adminEscapeHtml(payment.seller.email || '')}</p>
+                                    <p class="text-[10px] font-bold text-gray-500">${adminEscapeHtml(payment.seller.phone || '')}</p>
+                                    <p class="text-[10px] font-bold text-green-700 break-all mt-1">${adminEscapeHtml(payment.seller.iban || 'IBAN yok')}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border border-orange-100 bg-orange-50 p-4">
+                            <p class="text-sm font-black text-orange-900 mb-2">Kargo / Desi</p>
+                            <p class="text-xs font-bold text-orange-800">${adminEscapeHtml(payment.shipping.carrier || 'Firma yok')} · ${adminEscapeHtml(payment.shipping.desi || '-')} desi</p>
+                            <p class="text-[10px] font-bold text-orange-700">${adminEscapeHtml(payment.shipping.payerLabel)} · ${adminMoney(payment.shipping.chargeAmount)}</p>
+                        </div>
+                        <div class="rounded-2xl border border-green-100 bg-green-50 p-4">
+                            <p class="text-sm font-black text-green-900 mb-2">Satıcı Aktarımı</p>
+                            <p class="text-xs font-bold text-green-800">Durum: ${adminEscapeHtml(payment.payout.status)}</p>
+                            <p class="text-xl font-black text-green-700 mt-1">${adminMoney(payment.payout.amount)}</p>
+                            <p class="text-[10px] font-bold text-green-700">Hazır: ${adminEscapeHtml(payment.payout.availableAt || '-')} · Aktarıldı: ${adminEscapeHtml(payment.payout.paidAt || '-')}</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 p-4">
+                            <p class="text-sm font-black text-gray-800 mb-3">Son Hareketler</p>
+                            <div class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">${transactions}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function openFinanceDetail(paymentId) {
+            const modal = document.getElementById('finance-detail-modal');
+            const content = document.getElementById('finance-detail-content');
+            const subtitle = document.getElementById('finance-detail-subtitle');
+            if (!modal || !content) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            content.innerHTML = '<div class="py-12 text-center text-sm font-black text-gray-400">Yükleniyor...</div>';
+            if (subtitle) subtitle.textContent = 'Ödeme kaydı yükleniyor...';
+            try {
+                const response = await fetch(`/api/admin/payments/${paymentId}`);
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Detay alınamadı.');
+                if (subtitle) subtitle.textContent = `${result.payment.product.title} · ${result.payment.statusLabel}`;
+                content.innerHTML = renderFinanceDetail(result.payment);
+            } catch (error) {
+                content.innerHTML = `<div class="py-12 text-center text-sm font-black text-red-600">${adminEscapeHtml(error.message || 'Detay açılırken hata oluştu.')}</div>`;
+            }
         }
 
         function filterAdminTable(inputId, containerId) {
@@ -2260,6 +2875,102 @@
             showAdminNotice(result.success ? 'Sipariş takibi güncellendi.' : (result.message || 'Sipariş güncellenemedi.'), result.success ? 'success' : 'error');
         }
 
+        async function updatePayout(payoutId, action) {
+            const label = action === 'approve' ? 'satıcı ödemesini aktarıldı olarak işaretlemek' : 'satıcı ödeme talebini beklemeye almak';
+            if (!(await showAdminConfirm(`Bu ${label} istediğinize emin misiniz?`))) return;
+            const response = await fetch(`/api/admin/payouts/${payoutId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById(`payout-row-${payoutId}`)?.remove();
+                showAdminNotice(action === 'approve' ? 'Satıcı ödemesi aktarıldı işaretlendi.' : 'Satıcı ödeme talebi beklemeye alındı.');
+            } else {
+                showAdminNotice(result.message || 'Satıcı ödeme talebi güncellenemedi.', 'error');
+            }
+        }
+
+        async function bulkPayoutAction(action) {
+            const ids = Array.from(document.querySelectorAll('.payout-select:checked')).map(input => Number(input.value)).filter(Boolean);
+            if (!ids.length) {
+                showAdminNotice('Önce ödeme kuyruğundan kayıt seçin.', 'error');
+                return;
+            }
+            const label = action === 'approve' ? 'seçili ödemeleri aktarıldı yapmak' : 'seçili ödemeleri bekletmek';
+            if (!(await showAdminConfirm(`${ids.length} kayıt için ${label} istediğinize emin misiniz?`))) return;
+            const response = await fetch('/api/admin/bulk_payouts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payout_ids: ids, action })
+            });
+            const result = await response.json();
+            if (result.success) {
+                ids.forEach(id => document.getElementById(`payout-row-${id}`)?.remove());
+                showAdminNotice(`${result.changed} ödeme kaydı güncellendi.`);
+            } else {
+                showAdminNotice(result.message || 'Toplu ödeme işlemi yapılamadı.', 'error');
+            }
+        }
+
+        async function runDataCleanup(action) {
+            const labels = {
+                notifications: 'eski okunmuş bildirimleri',
+                logs: 'eski admin loglarını',
+                payment_errors: 'eski ödeme hata kayıtlarını',
+                orphan_uploads: 'sahipsiz görselleri',
+                backups: 'süresi dolan yedekleri'
+            };
+            if (!(await showAdminConfirm(`${labels[action] || 'seçili verileri'} temizlemek istediğinize emin misiniz?`))) return;
+            const resultBox = document.getElementById('data-cleanup-result');
+            if (resultBox) {
+                resultBox.className = 'mt-3 text-[11px] font-black text-gray-500';
+                resultBox.textContent = 'Temizlik çalışıyor...';
+            }
+            const response = await fetch('/api/admin/data_cleanup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            const result = await response.json();
+            if (resultBox) {
+                resultBox.className = `mt-3 text-[11px] font-black ${result.success ? 'text-green-700' : 'text-red-700'}`;
+                resultBox.textContent = result.success ? `${result.deleted} kayıt/dosya temizlendi.` : (result.message || 'Temizlik yapılamadı.');
+            }
+            showAdminNotice(result.success ? `${result.deleted} kayıt/dosya temizlendi.` : (result.message || 'Temizlik yapılamadı.'), result.success ? 'success' : 'error');
+        }
+
+        async function decideSaleDispute(reportId, decision) {
+            const messages = {
+                refund: 'Bu işlemde alıcıya iade kararı vermek',
+                release: 'Bu işlemde parayı satıcıya aktarmak',
+                partial_refund: 'Bu işlemde kısmi iade kararı vermek'
+            };
+            const payload = { decision };
+            if (decision === 'partial_refund') {
+                const amount = Number(document.getElementById(`partial-refund-${reportId}`)?.value || 0);
+                if (!amount || amount <= 0) {
+                    showAdminNotice('Kısmi iade için tutar girin.', 'error');
+                    return;
+                }
+                payload.amount = amount;
+            }
+            if (!(await showAdminConfirm(`${messages[decision] || 'Bu kararı uygulamak'} istediğinize emin misiniz?`))) return;
+            const response = await fetch(`/api/admin/sale_dispute/${reportId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById(`report-row-${reportId}`)?.remove();
+                showAdminNotice('Satış itirazı sonuçlandırıldı.');
+            } else {
+                showAdminNotice(result.message || 'Satış itirazı sonuçlandırılamadı.', 'error');
+            }
+        }
+
         async function resolveFeaturedRequest(requestId, status) {
             const actionText = status === 'approved' ? 'onaylamak' : 'reddetmek';
             if (!(await showAdminConfirm(`Bu öne çıkarma talebini ${actionText} istediğinize emin misiniz?`))) return;
@@ -2305,6 +3016,27 @@
             }
         }
 
+        async function runAdminDemo(action) {
+            const resultBox = document.getElementById('admin-demo-result');
+            if (resultBox) {
+                resultBox.classList.remove('hidden', 'text-red-700', 'text-green-700');
+                resultBox.classList.add('text-purple-700');
+                resultBox.textContent = 'Deneme işlemi çalışıyor...';
+            }
+            const response = await fetch('/api/admin/demo_flow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            const result = await response.json();
+            if (resultBox) {
+                resultBox.classList.remove('text-purple-700');
+                resultBox.classList.add(result.success ? 'text-green-700' : 'text-red-700');
+                resultBox.textContent = result.message || (result.success ? 'Deneme tamamlandı.' : 'Deneme tamamlanamadı.');
+            }
+            showAdminNotice(result.message || (result.success ? 'Deneme tamamlandı.' : 'Deneme tamamlanamadı.'), result.success ? 'success' : 'error');
+        }
+
         async function saveSettings() {
             const payload = {
                 min_bid: document.getElementById('setting-min-bid').value,
@@ -2313,6 +3045,7 @@
                 default_duration_days: document.getElementById('setting-default-duration').value,
                 max_images: document.getElementById('setting-max-images').value,
                 featured_price: document.getElementById('setting-featured-price').value,
+                featured_packages: document.getElementById('setting-featured-packages').value.trim(),
                 payment_service_fee_fixed: document.getElementById('setting-payment-service-fixed').value,
                 payment_service_fee_percent: document.getElementById('setting-payment-service-percent').value,
                 platform_commission_percent: document.getElementById('setting-platform-commission-percent').value,
@@ -2323,7 +3056,9 @@
                 support_instagram: document.getElementById('setting-support-instagram').value.trim(),
                 secure_shipping_carrier: document.getElementById('setting-secure-shipping-carrier').value.trim(),
                 secure_shipping_rates: document.getElementById('setting-secure-shipping-rates').value.trim(),
-                kvkk_text: document.getElementById('setting-kvkk-text').value.trim()
+                secure_shipping_carrier_rates: document.getElementById('setting-secure-shipping-carrier-rates').value.trim(),
+                kvkk_text: document.getElementById('setting-kvkk-text').value.trim(),
+                sales_terms_text: document.getElementById('setting-sales-terms-text').value.trim()
             };
             const response = await fetch('/api/admin_settings', {
                 method: 'POST',
