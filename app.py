@@ -271,6 +271,18 @@ class Notification(db.Model):
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class UserNotificationPreference(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    bid_notifications = db.Column(db.Boolean, default=True)
+    sale_notifications = db.Column(db.Boolean, default=True)
+    payment_notifications = db.Column(db.Boolean, default=True)
+    exchange_notifications = db.Column(db.Boolean, default=True)
+    admin_notifications = db.Column(db.Boolean, default=True)
+    rating_notifications = db.Column(db.Boolean, default=True)
+    support_notifications = db.Column(db.Boolean, default=True)
+    security_notifications = db.Column(db.Boolean, default=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -601,6 +613,8 @@ def create_notification(user_id, title, message, notification_type='info', produ
         return
     if notification_type in {'product', 'search'}:
         return
+    if not notification_preference_enabled(user_id, notification_type):
+        return
 
     db.session.add(Notification(
         user_id=user_id,
@@ -629,6 +643,56 @@ def create_unique_unread_notification(user_id, title, message, notification_type
         return
 
     create_notification(user_id, title, message, notification_type, product_id)
+
+NOTIFICATION_PREFERENCE_FIELDS = {
+    "bid": "bid_notifications",
+    "sale": "sale_notifications",
+    "payment": "payment_notifications",
+    "exchange": "exchange_notifications",
+    "admin": "admin_notifications",
+    "rating": "rating_notifications",
+    "appeal": "support_notifications",
+    "warning": "security_notifications"
+}
+
+NOTIFICATION_PREFERENCE_LABELS = {
+    "bid": "Teklifler",
+    "sale": "Satış / sipariş",
+    "payment": "Ödeme / cüzdan",
+    "exchange": "Takas",
+    "admin": "Admin duyuruları",
+    "rating": "Yorum / puan",
+    "appeal": "Destek yanıtları",
+    "warning": "Güvenlik uyarıları"
+}
+
+def get_user_notification_preferences(user_id, create=False):
+    preferences = UserNotificationPreference.query.get(user_id)
+    if not preferences and create:
+        preferences = UserNotificationPreference(user_id=user_id)
+        db.session.add(preferences)
+        db.session.flush()
+    return preferences or UserNotificationPreference(user_id=user_id)
+
+def notification_preference_enabled(user_id, notification_type):
+    field = NOTIFICATION_PREFERENCE_FIELDS.get(notification_type)
+    if not field:
+        return True
+    preferences = UserNotificationPreference.query.get(user_id)
+    if not preferences:
+        return True
+    return bool(getattr(preferences, field, True))
+
+def serialize_notification_preferences(user_id):
+    preferences = get_user_notification_preferences(user_id)
+    return [
+        {
+            "key": key,
+            "label": label,
+            "enabled": True if getattr(preferences, NOTIFICATION_PREFERENCE_FIELDS[key], None) is None else bool(getattr(preferences, NOTIFICATION_PREFERENCE_FIELDS[key]))
+        }
+        for key, label in NOTIFICATION_PREFERENCE_LABELS.items()
+    ]
 
 def notify_product_owner_message(product, sender):
     if not product or not sender or product.owner_id == sender.id:
@@ -877,13 +941,14 @@ def get_site_settings():
     secure_shipping_rates = parse_secure_shipping_rates(settings.get("secure_shipping_rates"))
     secure_shipping_carrier_rates = parse_secure_shipping_carrier_rates(settings.get("secure_shipping_carrier_rates"))
     featured_packages = parse_featured_packages(settings.get("featured_packages"))
+    featured_package_price = next(iter(featured_packages.values()), safe_int(settings.get("featured_price"), 5, 0, 1000000))
     return {
         "min_bid": safe_int(settings.get("min_bid"), 5, 1, 1000000),
         "bid_step": safe_int(settings.get("bid_step"), 5, 1, 1000000),
         "chat_spam_seconds": safe_int(settings.get("chat_spam_seconds"), 5, 1, 120),
         "default_duration_days": default_duration_days,
         "max_images": safe_int(settings.get("max_images"), 5, 1, 5),
-        "featured_price": safe_int(settings.get("featured_price"), 5, 0, 1000000),
+        "featured_price": featured_package_price,
         "featured_packages": featured_packages,
         "featured_packages_text": json.dumps(featured_packages, ensure_ascii=False, indent=2),
         "payment_service_fee_fixed": safe_int(settings.get("payment_service_fee_fixed"), 0, 0, 1000000),
@@ -1650,13 +1715,22 @@ def get_user_wallet_summary(user_id):
     seller_intents = PaymentIntent.query.filter_by(seller_id=user_id).all()
     buyer_intents = PaymentIntent.query.filter_by(buyer_id=user_id).all()
     payouts = SellerPayout.query.filter_by(seller_id=user_id).all()
+    ready_payout = sum(payout.amount or 0 for payout in payouts if payout.status == 'ready')
+    requested_payout = sum(payout.amount or 0 for payout in payouts if payout.status == 'requested')
+    paid_out = sum(payout.amount or 0 for payout in payouts if payout.status == 'paid')
     return {
-        "pendingPayout": sum(payout.amount or 0 for payout in payouts if payout.status in {'ready', 'requested'}),
+        "readyPayout": ready_payout,
+        "requestedPayout": requested_payout,
+        "pendingPayout": ready_payout + requested_payout,
         "preparingPayout": sum(payout.amount or 0 for payout in payouts if payout.status == 'pending'),
-        "paidOut": sum(payout.amount or 0 for payout in payouts if payout.status == 'paid'),
+        "paidOut": paid_out,
         "salesGross": sum(intent.product_amount or 0 for intent in seller_intents),
         "commissionPaid": sum(intent.commission_fee or 0 for intent in seller_intents),
         "shippingDebt": sum(intent.seller_shipping_debt or 0 for intent in seller_intents),
+        "netEarnings": sum(intent.seller_payout_amount or 0 for intent in seller_intents if intent.status in {'ready_for_payout', 'paid_out'}),
+        "escrowSales": sum(intent.buyer_total or 0 for intent in seller_intents if intent.status == 'escrow'),
+        "refundedAmount": sum(intent.buyer_total or 0 for intent in buyer_intents if intent.status == 'refunded'),
+        "cancelledAmount": sum(intent.buyer_total or 0 for intent in buyer_intents if intent.status == 'cancelled'),
         "purchaseTotal": sum(intent.buyer_total or 0 for intent in buyer_intents),
         "openPayments": sum(1 for intent in buyer_intents if intent.status in {'draft', 'pending'})
     }
@@ -1709,6 +1783,8 @@ def get_finance_summary():
     month_start = datetime.combine(now.replace(day=1).date(), datetime.min.time())
     paid_intents = [intent for intent in intents if intent.status in {'paid', 'escrow', 'ready_for_payout', 'paid_out'}]
     paid_featured = [request for request in featured_requests if request.payment_status == 'paid']
+    refunded_intents = [intent for intent in intents if intent.status == 'refunded']
+    cancelled_intents = [intent for intent in intents if intent.status == 'cancelled']
     return {
         "grossVolume": sum(intent.buyer_total or 0 for intent in intents),
         "productVolume": sum(intent.product_amount or 0 for intent in intents),
@@ -1723,6 +1799,10 @@ def get_finance_summary():
         "escrowAmount": sum(intent.buyer_total or 0 for intent in intents if intent.status == 'escrow'),
         "openPaymentCount": sum(1 for intent in intents if intent.status in {'draft', 'pending'}),
         "paidPaymentCount": sum(1 for intent in intents if intent.status in {'paid', 'escrow', 'ready_for_payout', 'paid_out'}),
+        "refundCount": len(refunded_intents),
+        "refundAmount": sum(intent.buyer_total or 0 for intent in refunded_intents),
+        "cancelledPaymentCount": len(cancelled_intents),
+        "cancelledAmount": sum(intent.buyer_total or 0 for intent in cancelled_intents),
         "featuredPendingAmount": sum(request.payment_amount or 0 for request in featured_requests if request.payment_status == 'pending'),
         "featuredPaidAmount": sum(request.payment_amount or 0 for request in paid_featured),
         "todayRevenue": sum(intent.platform_total_fee or 0 for intent in paid_intents if intent.updated_at >= today_start) + sum(request.payment_amount or 0 for request in paid_featured if (request.resolved_at or request.created_at) >= today_start),
@@ -1853,7 +1933,16 @@ def get_cleanup_summary():
         "oldAdminLogs": AdminLog.query.count(),
         "oldPaymentErrors": PaymentErrorLog.query.filter(PaymentErrorLog.created_at < now - timedelta(days=30)).count(),
         "oldBackups": old_backup_count,
-        "orphanUploads": orphan_uploads["orphanCount"]
+        "orphanUploads": orphan_uploads["orphanCount"],
+        "financeRecords": (
+            PaymentIntent.query.count()
+            + PaymentTransaction.query.count()
+            + SellerPayout.query.count()
+            + PlatformFee.query.count()
+            + ShippingCharge.query.count()
+            + FeaturedRequest.query.count()
+            + PaymentErrorLog.query.count()
+        )
     }
 
 def build_launch_checklist():
@@ -1868,6 +1957,53 @@ def build_launch_checklist():
         {"label": "Bakım modu kapalı", "ok": not get_site_settings()["maintenance_mode"], "detail": "Yayına çıkarken bakım modu kapalı olmalı."},
         {"label": "Upload imza kontrolü", "ok": True, "detail": "JPG, PNG, WEBP imza kontrolü aktif."}
     ]
+
+def env_has_any(*names):
+    return any(bool(os.environ.get(name)) for name in names)
+
+def build_live_readiness_panel():
+    settings = get_site_settings()
+    system_health = get_system_health_summary()
+    admin_email = os.environ.get('ADMIN_EMAIL')
+    shipping_ready = bool(
+        settings["secure_shipping_carrier"]
+        and settings["secure_shipping_carrier_rates"]
+        and settings["secure_shipping_carrier"] in SHIPPING_CARRIERS
+    )
+    mail_ready = bool(settings["support_email"] or env_has_any('SMTP_HOST', 'MAIL_SERVER', 'SENDGRID_API_KEY', 'RESEND_API_KEY'))
+    items = [
+        {"group": "Ödeme", "label": "PayTR canlı anahtarları", "ok": is_paytr_configured(), "detail": "Ödeme token ve callback akışı için zorunlu."},
+        {"group": "Ödeme", "label": "PUBLIC_BASE_URL", "ok": bool(os.environ.get('PUBLIC_BASE_URL')), "detail": "PayTR dönüş ve callback adresleri netleşir."},
+        {"group": "Güvenlik", "label": "Güçlü SECRET_KEY", "ok": app.config['SECRET_KEY'] != 'cok-gizli-bir-anahtar-123', "detail": "Oturum ve imza güvenliği için canlı anahtar olmalı."},
+        {"group": "Güvenlik", "label": "HTTPS secure cookie", "ok": bool(app.config.get('SESSION_COOKIE_SECURE')), "detail": "Canlı HTTPS üzerinde SESSION_COOKIE_SECURE=1 önerilir."},
+        {"group": "Admin", "label": "Ana admin hesabı", "ok": bool(admin_email and User.query.filter_by(email=admin_email, role='admin').first()), "detail": "ADMIN_EMAIL ile doğrulanan tek ana admin olmalı."},
+        {"group": "Veri", "label": "Şifreli yedek", "ok": bool(os.environ.get('BACKUP_ENCRYPTION_KEY') and system_health["backupCount"]), "detail": f"Yedek: {system_health['latestBackup'] or 'henüz yok'}"},
+        {"group": "Operasyon", "label": "Bakım modu kapalı", "ok": not settings["maintenance_mode"], "detail": "Canlı yayında kullanıcılar siteye erişebilmeli."},
+        {"group": "Operasyon", "label": "Kargo / desi ayarları", "ok": shipping_ready, "detail": f"{settings['secure_shipping_carrier'] or 'Firma yok'} için desi fiyatları kontrol edilir."},
+        {"group": "Destek", "label": "Destek maili", "ok": mail_ready, "detail": settings["support_email"] or "SMTP veya destek maili eklenmeli."},
+        {"group": "Temizlik", "label": "Son 7 gün ödeme hatası", "ok": system_health["paymentErrors7d"] == 0, "detail": f"{system_health['paymentErrors7d']} hata kaydı var."}
+    ]
+    passed = sum(1 for item in items if item["ok"])
+    score = round((passed / len(items)) * 100) if items else 0
+    if score >= 85:
+        tone = "green"
+        status = "Canlıya yakın"
+    elif score >= 60:
+        tone = "yellow"
+        status = "Kontrol gerekiyor"
+    else:
+        tone = "red"
+        status = "Canlıya hazır değil"
+    blockers = [item for item in items if not item["ok"]]
+    return {
+        "score": score,
+        "passed": passed,
+        "total": len(items),
+        "tone": tone,
+        "status": status,
+        "items": items,
+        "blockers": blockers[:4]
+    }
 
 def build_risk_center(users):
     risky_users = []
@@ -3923,6 +4059,13 @@ def send_exchange_offer():
         offered_product_id=offered_product.id,
         message_id=private_message.id
     ))
+    create_unique_unread_notification(
+        target_product.owner_id,
+        "Yeni takas teklifi",
+        message_text,
+        "exchange",
+        target_product.id
+    )
     db.session.commit()
     return jsonify({
         "success": True,
@@ -4154,6 +4297,7 @@ def get_profile():
         "reviews": get_user_reviews(current_user.id, 10),
         "wallet": get_user_wallet_summary(current_user.id),
         "payments": get_user_payment_rows(current_user.id, 10),
+        "notificationPreferences": serialize_notification_preferences(current_user.id),
         "supportTickets": [{
             "id": appeal.id,
             "message": repair_turkish_mojibake(appeal.message),
@@ -4269,6 +4413,20 @@ def update_profile_settings():
     current_user.payout_iban = payout_iban or None
     db.session.commit()
     return jsonify({"success": True, "message": "Ayarlar kaydedildi."})
+
+@app.route('/api/profile/notification_settings', methods=['POST'])
+@login_required
+def update_profile_notification_settings():
+    data = request.json or {}
+    preferences = get_user_notification_preferences(current_user.id, create=True)
+    for key, field in NOTIFICATION_PREFERENCE_FIELDS.items():
+        if key in data:
+            setattr(preferences, field, bool(data.get(key)))
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "preferences": serialize_notification_preferences(current_user.id)
+    })
 
 @app.route('/api/users/<int:user_id>/public_profile', methods=['GET'])
 @login_required
@@ -4596,9 +4754,19 @@ def admin_panel():
         "oldAdminLogs": 0,
         "oldPaymentErrors": 0,
         "oldBackups": 0,
-        "orphanUploads": 0
+        "orphanUploads": 0,
+        "financeRecords": 0
     }
     launch_checklist = build_launch_checklist() if can_view_private_admin_data else []
+    live_readiness = build_live_readiness_panel() if can_view_private_admin_data else {
+        "score": 0,
+        "passed": 0,
+        "total": 0,
+        "tone": "red",
+        "status": "Yetki yok",
+        "items": [],
+        "blockers": []
+    }
     shipping_alerts = build_shipping_alerts() if can_view_private_admin_data else []
     system_health = get_system_health_summary() if can_view_private_admin_data else {
         "databaseSizeMb": 0,
@@ -4714,6 +4882,7 @@ def admin_panel():
         "escrow": "bg-blue-100 text-blue-700",
         "ready_for_payout": "bg-indigo-100 text-indigo-700",
         "paid_out": "bg-green-100 text-green-700",
+        "refunded": "bg-purple-100 text-purple-700",
         "cancelled": "bg-red-100 text-red-700"
     }
     for intent in PaymentIntent.query.order_by(PaymentIntent.created_at.desc()).limit(30).all():
@@ -4743,8 +4912,8 @@ def admin_panel():
     tx_labels = {
         "payment": "Ödeme kaydı",
         "callback": "PayTR callback",
-        "seller_payout": "Satıcı aktarımı",
-        "dispute": "İtiraz kararı"
+            "seller_payout": "Satıcı aktarımı",
+        "dispute": "İtiraz / iade kararı"
     }
     for transaction in PaymentTransaction.query.order_by(PaymentTransaction.created_at.desc()).limit(30).all():
         intent = PaymentIntent.query.get(transaction.payment_intent_id)
@@ -4791,6 +4960,38 @@ def admin_panel():
     missing_iban_count = SellerPayout.query.join(User, SellerPayout.seller_id == User.id).filter(SellerPayout.status.in_(['requested', 'ready']), (User.payout_iban.is_(None)) | (User.payout_iban == '')).count()
     if missing_iban_count:
         finance_alerts.append({"title": "IBAN eksiği", "text": f"{missing_iban_count} satıcı aktarımı IBAN bekliyor.", "tone": "orange", "icon": "fa-building-columns"})
+    if finance_summary["refundCount"] or finance_summary["cancelledPaymentCount"]:
+        finance_alerts.append({
+            "title": "İade / iptal takibi",
+            "text": f"{finance_summary['refundCount']} iade, {finance_summary['cancelledPaymentCount']} iptal kaydı var.",
+            "tone": "red" if finance_summary["refundCount"] else "orange",
+            "icon": "fa-rotate-left"
+        })
+    open_payment_counts = {}
+    for intent in PaymentIntent.query.filter(PaymentIntent.status.in_(['draft', 'pending', 'cancelled'])).all():
+        open_payment_counts[intent.buyer_id] = open_payment_counts.get(intent.buyer_id, 0) + 1
+    risky_buyer_id = max(open_payment_counts, key=open_payment_counts.get) if open_payment_counts else None
+    if risky_buyer_id and open_payment_counts[risky_buyer_id] >= 3:
+        risky_buyer = User.query.get(risky_buyer_id)
+        finance_alerts.append({
+            "title": "Şüpheli ödeme denemesi",
+            "text": f"{risky_buyer.name if risky_buyer else 'Bir kullanıcı'} için {open_payment_counts[risky_buyer_id]} açık/iptal ödeme denemesi var.",
+            "tone": "red",
+            "icon": "fa-user-shield"
+        })
+    day_ago = datetime.utcnow() - timedelta(days=1)
+    daily_bid_counts = {}
+    for bid in Bid.query.filter(Bid.timestamp >= day_ago).all():
+        daily_bid_counts[bid.user_id] = daily_bid_counts.get(bid.user_id, 0) + 1
+    risky_bidder_id = max(daily_bid_counts, key=daily_bid_counts.get) if daily_bid_counts else None
+    if risky_bidder_id and daily_bid_counts[risky_bidder_id] >= 10:
+        risky_bidder = User.query.get(risky_bidder_id)
+        finance_alerts.append({
+            "title": "Günlük teklif limiti yakalandı",
+            "text": f"{risky_bidder.name if risky_bidder else 'Bir kullanıcı'} son 24 saatte {daily_bid_counts[risky_bidder_id]} teklif verdi.",
+            "tone": "orange",
+            "icon": "fa-gauge-high"
+        })
     if not finance_alerts:
         finance_alerts.append({"title": "Finans akışı temiz", "text": "Acil uyarı görünmüyor.", "tone": "blue", "icon": "fa-circle-check"})
 
@@ -5022,6 +5223,10 @@ def admin_panel():
             "escrowAmount": 0,
             "openPaymentCount": 0,
             "paidPaymentCount": 0,
+            "refundCount": 0,
+            "refundAmount": 0,
+            "cancelledPaymentCount": 0,
+            "cancelledAmount": 0,
             "featuredPendingAmount": 0,
             "featuredPaidAmount": 0,
             "todayRevenue": 0,
@@ -5055,6 +5260,7 @@ def admin_panel():
         system_health=system_health,
         cleanup_summary=cleanup_summary,
         launch_checklist=launch_checklist,
+        live_readiness=live_readiness,
         paytr_status={
             "configured": is_paytr_configured(),
             "test_mode": os.environ.get('PAYTR_TEST_MODE', '1'),
@@ -5725,6 +5931,7 @@ def update_admin_settings():
     update_site_setting("secure_shipping_rates", json.dumps(parsed_shipping_rates, ensure_ascii=False))
     update_site_setting("secure_shipping_carrier_rates", json.dumps(parsed_carrier_rates, ensure_ascii=False))
     update_site_setting("featured_packages", json.dumps(parsed_featured_packages, ensure_ascii=False))
+    update_site_setting("featured_price", next(iter(parsed_featured_packages.values()), 0))
     for key, max_length in {
         "support_phone": 80,
         "support_email": 120,
@@ -6243,6 +6450,14 @@ def admin_data_cleanup():
         deleted = AdminLog.query.delete(synchronize_session=False)
     elif action == 'payment_errors':
         deleted = PaymentErrorLog.query.filter(PaymentErrorLog.created_at < now - timedelta(days=30)).delete(synchronize_session=False)
+    elif action == 'finance':
+        deleted += PaymentTransaction.query.delete(synchronize_session=False)
+        deleted += PlatformFee.query.delete(synchronize_session=False)
+        deleted += ShippingCharge.query.delete(synchronize_session=False)
+        deleted += SellerPayout.query.delete(synchronize_session=False)
+        deleted += PaymentErrorLog.query.delete(synchronize_session=False)
+        deleted += PaymentIntent.query.delete(synchronize_session=False)
+        deleted += FeaturedRequest.query.delete(synchronize_session=False)
     elif action == 'backups':
         deleted = cleanup_old_backups(os.path.join(app.root_path, 'backups'))
     elif action == 'orphan_uploads':

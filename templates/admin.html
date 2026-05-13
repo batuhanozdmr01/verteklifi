@@ -298,7 +298,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-4">
                 <div class="rounded-2xl bg-green-50 border border-green-100 p-4">
                     <p class="text-[10px] font-black text-green-700 uppercase">Toplam işlem hacmi</p>
                     <p class="text-2xl font-black text-green-800 mt-1">{{ finance_summary.grossVolume }} ₺</p>
@@ -318,6 +318,11 @@
                     <p class="text-[10px] font-black text-orange-700 uppercase">Satıcı aktarımı</p>
                     <p class="text-2xl font-black text-orange-800 mt-1">{{ finance_summary.pendingPayout }} ₺</p>
                     <p class="text-[10px] font-bold text-orange-600 mt-1">Talep: {{ finance_summary.requestedPayout }} ₺ · Hazır: {{ finance_summary.readyPayout }} ₺</p>
+                </div>
+                <div class="rounded-2xl bg-red-50 border border-red-100 p-4">
+                    <p class="text-[10px] font-black text-red-700 uppercase">İade / iptal</p>
+                    <p class="text-2xl font-black text-red-800 mt-1">{{ finance_summary.refundAmount + finance_summary.cancelledAmount }} ₺</p>
+                    <p class="text-[10px] font-bold text-red-600 mt-1">İade: {{ finance_summary.refundCount }} · İptal: {{ finance_summary.cancelledPaymentCount }}</p>
                 </div>
             </div>
 
@@ -341,6 +346,7 @@
                         <option value="escrow">Para güvende</option>
                         <option value="ready_for_payout">Aktarıma hazır</option>
                         <option value="paid_out">Aktarıldı</option>
+                        <option value="refunded">İade</option>
                         <option value="cancelled">İptal</option>
                     </select>
                     <select id="finance-period-filter" onchange="filterFinanceRows()" class="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-green-500">
@@ -636,20 +642,51 @@
                     <button onclick="runDataCleanup('logs')" class="text-left bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-2xl p-4 transition"><p id="cleanup-count-logs" class="text-2xl font-black text-gray-700">{{ cleanup_summary.oldAdminLogs }}</p><p class="text-[10px] font-black text-gray-700 uppercase">Admin işlem kaydı</p></button>
                     <button onclick="runDataCleanup('payment_errors')" class="text-left bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl p-4 transition"><p id="cleanup-count-payment-errors" class="text-2xl font-black text-red-700">{{ cleanup_summary.oldPaymentErrors }}</p><p class="text-[10px] font-black text-red-700 uppercase">Eski ödeme hatası</p></button>
                     <button onclick="runDataCleanup('orphan_uploads')" class="text-left bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl p-4 transition"><p id="cleanup-count-orphan-uploads" class="text-2xl font-black text-orange-700">{{ cleanup_summary.orphanUploads }}</p><p class="text-[10px] font-black text-orange-700 uppercase">Sahipsiz görsel</p></button>
+                    <button onclick="runDataCleanup('finance')" class="sm:col-span-2 text-left bg-green-50 hover:bg-green-100 border border-green-100 rounded-2xl p-4 transition"><p id="cleanup-count-finance" class="text-2xl font-black text-green-700">{{ cleanup_summary.financeRecords }}</p><p class="text-[10px] font-black text-green-700 uppercase">Finans paneli kayıtları</p></button>
                     <button onclick="runDataCleanup('backups')" class="sm:col-span-2 text-left bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-2xl p-4 transition"><p id="cleanup-count-backups" class="text-2xl font-black text-indigo-700">{{ cleanup_summary.oldBackups }}</p><p class="text-[10px] font-black text-indigo-700 uppercase">Süresi dolan yedek</p></button>
                 </div>
                 <p id="data-cleanup-result" class="hidden mt-3 text-[11px] font-black"></p>
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                <h2 class="text-xl font-black text-gray-800 flex items-center mb-4"><i class="fa-solid fa-rocket mr-3 text-purple-600"></i>Yayın Öncesi Kontrol</h2>
-                <div class="space-y-2">
-                    {% for item in launch_checklist %}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-xl font-black text-gray-800 flex items-center"><i class="fa-solid fa-rocket mr-3 text-purple-600"></i>Canlı Mod Kontrolü</h2>
+                        <p class="text-xs font-bold text-gray-400 mt-1">Ödeme, güvenlik, yedek, kargo ve destek hazırlığını tek yerde gösterir.</p>
+                    </div>
+                    <div class="rounded-2xl px-4 py-3 text-center {% if live_readiness.tone == 'green' %}bg-green-50 border border-green-100 text-green-700{% elif live_readiness.tone == 'yellow' %}bg-yellow-50 border border-yellow-100 text-yellow-700{% else %}bg-red-50 border border-red-100 text-red-700{% endif %}">
+                        <p class="text-3xl font-black leading-none">{{ live_readiness.score }}%</p>
+                        <p class="text-[9px] font-black uppercase mt-1">{{ live_readiness.status }}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div class="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                        <p class="text-lg font-black text-gray-800">{{ live_readiness.passed }}/{{ live_readiness.total }}</p>
+                        <p class="text-[9px] font-black text-gray-500 uppercase">Tamam</p>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                        <p class="text-lg font-black text-gray-800">{{ live_readiness.blockers | length }}</p>
+                        <p class="text-[9px] font-black text-gray-500 uppercase">Öncelik</p>
+                    </div>
+                </div>
+                {% if live_readiness.blockers %}
+                <div class="mb-4 rounded-2xl bg-red-50 border border-red-100 p-3">
+                    <p class="text-xs font-black text-red-700 mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Canlıya almadan önce bakılacaklar</p>
+                    <div class="space-y-2">
+                        {% for item in live_readiness.blockers %}
+                        <p class="text-[10px] font-bold text-red-700"><span class="font-black">{{ item.label }}:</span> {{ item.detail }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
+                    {% for item in live_readiness['items'] %}
                     <div class="flex items-start gap-3 rounded-xl border {% if item.ok %}border-green-100 bg-green-50{% else %}border-red-100 bg-red-50{% endif %} p-3">
                         <i class="fa-solid {% if item.ok %}fa-circle-check text-green-600{% else %}fa-circle-exclamation text-red-600{% endif %} mt-0.5"></i>
-                        <div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-black uppercase {% if item.ok %}text-green-700{% else %}text-red-700{% endif %}">{{ item.group }}</p>
                             <p class="text-xs font-black text-gray-800">{{ item.label }}</p>
-                            <p class="text-[10px] font-bold text-gray-500">{{ item.detail }}</p>
+                            <p class="text-[10px] font-bold text-gray-500 break-words">{{ item.detail }}</p>
                         </div>
                     </div>
                     {% endfor %}
@@ -874,17 +911,30 @@
                     </label>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <label class="block rounded-2xl bg-gray-50 border border-gray-100 p-3">
-                            <span class="block text-[10px] font-black text-gray-500 uppercase">Öne çıkarma ücreti</span>
-                            <span class="block text-[11px] font-bold text-gray-400 mb-2">Kullanıcıya gösterilecek başlangıç tutarı.</span>
+                            <span class="block text-[10px] font-black text-gray-500 uppercase">Paket başlangıç fiyatı</span>
+                            <span class="block text-[11px] font-bold text-gray-400 mb-2">Öne çıkarma paketlerindeki ilk fiyattan otomatik gelir.</span>
                             <div class="flex items-center gap-2">
-                                <input id="setting-featured-price" type="number" value="{{ settings.featured_price }}" class="w-full border border-gray-200 rounded-xl p-3 text-sm" placeholder="Öne çıkarma">
+                                <input id="setting-featured-price" type="number" value="{{ settings.featured_price }}" readonly class="w-full border border-gray-200 rounded-xl p-3 text-sm bg-white text-gray-500 cursor-not-allowed" placeholder="Öne çıkarma">
                                 <span class="text-xs font-black text-gray-500">TL</span>
                             </div>
                         </label>
                         <label class="block rounded-2xl bg-indigo-50 border border-indigo-100 p-3">
                             <span class="block text-[10px] font-black text-indigo-700 uppercase">Öne çıkarma paketleri</span>
                             <span class="block text-[11px] font-bold text-indigo-500 mb-2">Gün: fiyat şeklinde JSON girilir.</span>
-                            <textarea id="setting-featured-packages" class="w-full border border-indigo-100 rounded-xl p-3 text-xs leading-relaxed h-28 custom-scrollbar bg-white" placeholder='{"1":10,"7":50,"30":150}'>{{ settings.featured_packages_text }}</textarea>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                                {% for days, price in settings.featured_packages.items() %}
+                                <div class="rounded-xl bg-white border border-indigo-100 p-3">
+                                    <p class="text-lg font-black text-indigo-900">{{ days }} gün</p>
+                                    <p class="text-xs font-black text-orange-600">{{ price }} ₺</p>
+                                    <p class="text-[9px] font-bold text-indigo-500">{{ (price / (days | int)) | round | int if (days | int) else price }} ₺ / gün</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <textarea id="setting-featured-packages" oninput="syncFeaturedPriceFromPackages()" class="w-full border border-indigo-100 rounded-xl p-3 text-xs leading-relaxed h-28 custom-scrollbar bg-white" placeholder='{"1":10,"7":50,"30":150}'>{{ settings.featured_packages_text }}</textarea>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <button type="button" onclick="fillFeaturedPackages('starter')" class="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-100 px-3 py-2 rounded-xl text-[10px] font-black">Başlangıç paketleri</button>
+                                <button type="button" onclick="fillFeaturedPackages('pro')" class="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-100 px-3 py-2 rounded-xl text-[10px] font-black">Profesyonel paketler</button>
+                            </div>
                         </label>
                         <label class="flex items-center justify-between gap-3 text-sm font-bold text-gray-600 bg-gray-50 rounded-2xl border border-gray-100 p-3">
                             <span>
@@ -2904,9 +2954,13 @@
                 logs: 'admin işlem kayıtlarını',
                 payment_errors: 'eski ödeme hata kayıtlarını',
                 orphan_uploads: 'sahipsiz görselleri',
+                finance: 'finans paneli kayıtlarını',
                 backups: 'süresi dolan yedekleri'
             };
-            if (!(await showAdminConfirm(`${labels[action] || 'seçili verileri'} temizlemek istediğinize emin misiniz?`))) return;
+            const confirmMessage = action === 'finance'
+                ? 'Finans panelindeki ödeme, işlem, aktarım, kargo ve öne çıkarma ödeme kayıtlarını temizlemek istediğinize emin misiniz?'
+                : `${labels[action] || 'seçili verileri'} temizlemek istediğinize emin misiniz?`;
+            if (!(await showAdminConfirm(confirmMessage))) return;
             const resultBox = document.getElementById('data-cleanup-result');
             if (resultBox) {
                 resultBox.className = 'mt-3 text-[11px] font-black text-gray-500';
@@ -2928,6 +2982,7 @@
                     'cleanup-count-logs': result.summary.oldAdminLogs,
                     'cleanup-count-payment-errors': result.summary.oldPaymentErrors,
                     'cleanup-count-orphan-uploads': result.summary.orphanUploads,
+                    'cleanup-count-finance': result.summary.financeRecords,
                     'cleanup-count-backups': result.summary.oldBackups
                 };
                 Object.entries(summaryMap).forEach(([id, value]) => {
@@ -2941,6 +2996,9 @@
                         empty.classList.remove('hidden');
                         empty.textContent = 'Admin işlem kaydı yok.';
                     }
+                }
+                if (action === 'finance') {
+                    setTimeout(() => window.location.reload(), 700);
                 }
             }
             showAdminNotice(result.success ? `${result.deleted} kayıt/dosya temizlendi.` : (result.message || 'Temizlik yapılamadı.'), result.success ? 'success' : 'error');
@@ -3042,14 +3100,45 @@
             showAdminNotice(result.message || (result.success ? 'Deneme tamamlandı.' : 'Deneme tamamlanamadı.'), result.success ? 'success' : 'error');
         }
 
+        function fillFeaturedPackages(type) {
+            const input = document.getElementById('setting-featured-packages');
+            if (!input) return;
+            const packages = type === 'pro'
+                ? { "1": 19, "3": 49, "7": 99, "30": 299 }
+                : { "1": 10, "7": 50, "30": 150 };
+            input.value = JSON.stringify(packages, null, 2);
+            syncFeaturedPriceFromPackages();
+            showAdminNotice('Öne çıkarma paket taslağı hazırlandı. Kaydetmeyi unutma.');
+        }
+
+        function getFeaturedPackageStartPrice() {
+            const input = document.getElementById('setting-featured-packages');
+            try {
+                const packages = JSON.parse(input?.value || '{}');
+                const first = Object.entries(packages)
+                    .map(([days, price]) => [Number(days), Number(price)])
+                    .filter(([days, price]) => days > 0 && price >= 0)
+                    .sort((a, b) => a[0] - b[0])[0];
+                return first ? first[1] : Number(document.getElementById('setting-featured-price')?.value || 0);
+            } catch (error) {
+                return Number(document.getElementById('setting-featured-price')?.value || 0);
+            }
+        }
+
+        function syncFeaturedPriceFromPackages() {
+            const priceInput = document.getElementById('setting-featured-price');
+            if (priceInput) priceInput.value = getFeaturedPackageStartPrice();
+        }
+
         async function saveSettings() {
+            syncFeaturedPriceFromPackages();
             const payload = {
                 min_bid: document.getElementById('setting-min-bid').value,
                 bid_step: document.getElementById('setting-bid-step').value,
                 chat_spam_seconds: document.getElementById('setting-chat-spam').value,
                 default_duration_days: document.getElementById('setting-default-duration').value,
                 max_images: document.getElementById('setting-max-images').value,
-                featured_price: document.getElementById('setting-featured-price').value,
+                featured_price: getFeaturedPackageStartPrice(),
                 featured_packages: document.getElementById('setting-featured-packages').value.trim(),
                 payment_service_fee_fixed: document.getElementById('setting-payment-service-fixed').value,
                 payment_service_fee_percent: document.getElementById('setting-payment-service-percent').value,
