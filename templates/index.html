@@ -710,6 +710,20 @@
         </div>
     </div>
 
+    <div id="modal-image-lightbox" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-[160] p-4 backdrop-blur-sm" onclick="if (event.target === this) closeImageLightbox()">
+        <button onclick="closeImageLightbox()" class="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl transition" title="Kapat">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <button id="lightbox-prev-button" onclick="moveLightboxImage(event, -1)" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white transition" title="Önceki fotoğraf">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <img id="lightbox-image" src="" class="max-w-[96vw] max-h-[86vh] object-contain rounded-2xl shadow-2xl select-none" ontouchstart="handleDetailTouchStart(event)" ontouchend="handleLightboxTouchEnd(event)">
+        <button id="lightbox-next-button" onclick="moveLightboxImage(event, 1)" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white transition" title="Sonraki fotoğraf">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <div id="lightbox-counter" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/10 text-white text-xs font-black px-4 py-2 rounded-full"></div>
+    </div>
+
     <script type="application/json" id="app-state">
         {{ {"currentUserId": current_user.id if current_user.is_authenticated else none, "isAuthenticated": current_user.is_authenticated, "siteSettings": site_settings, "paytrConfigured": paytr_configured, "shippingCarriers": shipping_carriers, "shippingTrackingUrls": shipping_tracking_urls} | tojson }}
     </script>
@@ -1818,7 +1832,7 @@
             const container = document.getElementById('product-container');
             container.innerHTML = products.length ? "" : renderEmptyState(getCurrentEmptyState());
             products.forEach(p => {
-                let statusBadge = `<div class="absolute top-2 right-2 ${p.status === 'active' ? 'bg-green-600' : 'bg-orange-600'} text-white text-[8px] font-bold px-2 py-1 rounded-full z-10 uppercase">${p.statusLabel || p.status}</div>`;
+                let statusBadge = `<div class="absolute top-2 right-2 ${p.status === 'active' ? 'bg-green-600' : 'bg-orange-600'} text-white text-[8px] font-bold px-2 py-1 rounded-full z-10 uppercase">${escapeHtml(getProductStatusText(p))}</div>`;
                 const participantsHtml = renderParticipants(p);
                 const trustLabel = p.owner_trust && p.owner_trust.label ? p.owner_trust.label : '';
                 const cardImages = (p.imgs && p.imgs.length ? p.imgs : [p.img]).filter(Boolean);
@@ -1955,6 +1969,49 @@
                     `).join('')}
                 </div>
             </div>`;
+        }
+
+        function getProductStatusText(product) {
+            const labels = {
+                pending_admin_approval: 'Onay bekliyor',
+                active: 'Aktif',
+                pending_seller_approval: 'Satıcı onayı',
+                pending_bidder_action: 'Alıcı onayı',
+                seller_info_confirmation: 'Satıcı bilgi onayı',
+                completed: 'Satıldı',
+                cancelled: 'İptal'
+            };
+            return product.statusLabel || labels[product.status] || product.status || 'Aktif';
+        }
+
+        function renderProductDescription(product) {
+            const rawDescription = String(product.desc || '').trim();
+            const text = rawDescription || 'Açıklama yok.';
+            const escaped = escapeHtml(text).replace(/\n/g, '<br>');
+            const needsToggle = rawDescription.length > 260 || rawDescription.split(/\r?\n/).length > 4;
+            if (!needsToggle) {
+                return `<p class="text-gray-500 text-sm mb-4 whitespace-pre-wrap break-words overflow-hidden">${escaped}</p>`;
+            }
+            return `
+                <div class="mb-4 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                    <div id="product-desc-${product.id}" class="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap break-words overflow-hidden" style="max-height: 6.5rem;">${escaped}</div>
+                    <button type="button" id="product-desc-toggle-${product.id}" onclick="toggleProductDescription(event, ${product.id})" class="mt-2 text-orange-600 hover:text-orange-700 text-xs font-black">
+                        Devamı
+                    </button>
+                </div>
+            `;
+        }
+
+        function toggleProductDescription(event, productId) {
+            event.preventDefault();
+            event.stopPropagation();
+            const desc = document.getElementById(`product-desc-${productId}`);
+            const button = document.getElementById(`product-desc-toggle-${productId}`);
+            if (!desc || !button) return;
+            const expanded = desc.dataset.expanded === '1';
+            desc.dataset.expanded = expanded ? '0' : '1';
+            desc.style.maxHeight = expanded ? '6.5rem' : 'none';
+            button.textContent = expanded ? 'Devamı' : 'Daha az göster';
         }
 
         function changeCardImage(event, productId, direction) {
@@ -2115,7 +2172,7 @@
                     ${!buyerContactOnly && p.seller_info.availability ? `<p>Uygunluk: ${escapeHtml(p.seller_info.availability)}</p>` : ''}
                     ${currentUserId === p.owner_id && p.buyer_info ? `<div class="mt-3 pt-3 border-t border-green-100">${renderBuyerInfoCard(p.buyer_info, 'Alıcı bilgileri')}</div>` : ''}
                 </div>`;
-            } else { actionArea = `<p class="text-center italic text-gray-400">Durum: ${p.status.replace(/_/g, ' ')}</p>`; }
+            } else { actionArea = `<p class="text-center italic text-gray-400">Durum: ${escapeHtml(getProductStatusText(p))}</p>`; }
 
             if (p.status === 'active' && appState.isAuthenticated && currentUserId !== p.owner_id) {
                 actionArea += `<div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-3">
@@ -2297,7 +2354,10 @@
             content.innerHTML = `<div class="bg-white rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
                 <div class="p-3 sm:p-4 bg-gray-50 flex flex-col items-center justify-center gap-4">
                     <div class="relative w-full">
-                        <img id="main-detail-img" src="${escapeHtml(detailImages[activeDetailImageIndex])}" ontouchstart="handleDetailTouchStart(event)" ontouchend="handleDetailTouchEnd(event)" class="rounded-2xl w-full max-h-[350px] object-contain select-none">
+                        <img id="main-detail-img" src="${escapeHtml(detailImages[activeDetailImageIndex])}" onclick="openImageLightbox()" ontouchstart="handleDetailTouchStart(event)" ontouchend="handleDetailTouchEnd(event)" class="rounded-2xl w-full max-h-[350px] object-contain select-none cursor-zoom-in" title="Büyütmek için tıkla">
+                        <button onclick="openImageLightbox()" class="absolute left-3 bottom-3 bg-black/60 hover:bg-black/80 text-white text-[10px] font-black px-3 py-2 rounded-full shadow-lg transition">
+                            <i class="fa-solid fa-magnifying-glass-plus mr-1"></i>Büyüt
+                        </button>
                         ${galleryButtons}
                     </div>
                     <div class="flex gap-2 w-full overflow-x-auto pb-1 custom-scrollbar">${imagesHtml}</div>
@@ -2309,7 +2369,7 @@
                             <button onclick="openUserActions(${p.owner_id}, '${escapeJs(p.owner_name)}')" class="text-gray-400 hover:text-orange-600 text-xs font-bold transition text-left">Satıcı: ${escapeHtml(p.owner_name)} ${p.owner_verified ? '<span class="ml-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[9px] font-black">DOĞRULU</span>' : ''} ${p.owner_rating && p.owner_rating.count ? `<span class="ml-1 text-orange-500"><i class="fa-solid fa-star"></i> ${p.owner_rating.average}</span>` : ''}</button>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 mb-3">
-                            <span class="${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} px-3 py-1 rounded-full text-[10px] font-black uppercase">${p.statusLabel || p.status}</span>
+                            <span class="${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} px-3 py-1 rounded-full text-[10px] font-black uppercase">${escapeHtml(getProductStatusText(p))}</span>
                             ${p.condition ? `<span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black">${escapeHtml(p.condition)}</span>` : ''}
                             ${p.exchangeOpen ? '<span class="bg-orange-50 text-orange-700 border border-orange-100 px-3 py-1 rounded-full text-[10px] font-black lowercase">Takasa açık</span>' : ''}
                             ${p.securePurchase ? `<span class="bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-circle-check mr-1"></i>Güvenli alışveriş</span>` : ''}
@@ -2328,7 +2388,7 @@
                             <button onclick="reportProduct(${p.id})" class="mt-2 bg-red-600 text-white px-3 py-2 rounded-lg text-[10px] font-black">Rapor Gönder</button>
                         </div>
                         <h2 class="text-xl sm:text-2xl font-black mb-1 text-gray-800 break-words">${p.title}</h2>
-                        <p class="text-gray-500 text-sm mb-4">${p.desc || 'Açıklama yok.'}</p>
+                        ${renderProductDescription(p)}
                         <div class="bg-gray-50 p-4 rounded-xl mb-4">
                             <div class="mb-2">
                                 <p class="text-[10px] text-gray-400 font-black uppercase">Başlangıç Fiyatı</p>
@@ -2374,10 +2434,56 @@
 
             const counter = document.getElementById('detail-image-counter');
             if (counter) counter.textContent = `${activeDetailImageIndex + 1} / ${images.length}`;
+            syncImageLightbox();
         }
 
         function moveDetailImage(direction) {
             selectDetailImage(activeDetailImageIndex + direction);
+        }
+
+        function syncImageLightbox() {
+            const modal = document.getElementById('modal-image-lightbox');
+            if (!modal || modal.classList.contains('hidden')) return;
+            const images = getActiveDetailImages();
+            const image = document.getElementById('lightbox-image');
+            const counter = document.getElementById('lightbox-counter');
+            const prevButton = document.getElementById('lightbox-prev-button');
+            const nextButton = document.getElementById('lightbox-next-button');
+            if (!images.length || !image) return closeImageLightbox();
+            image.src = images[activeDetailImageIndex];
+            if (counter) counter.textContent = `${activeDetailImageIndex + 1} / ${images.length}`;
+            [prevButton, nextButton].forEach(button => {
+                if (button) button.classList.toggle('hidden', images.length <= 1);
+            });
+        }
+
+        function openImageLightbox() {
+            const images = getActiveDetailImages();
+            if (!images.length) return;
+            const modal = document.getElementById('modal-image-lightbox');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            syncImageLightbox();
+        }
+
+        function closeImageLightbox() {
+            const modal = document.getElementById('modal-image-lightbox');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function moveLightboxImage(event, direction) {
+            event.preventDefault();
+            event.stopPropagation();
+            moveDetailImage(direction);
+        }
+
+        function handleLightboxTouchEnd(event) {
+            const delta = event.changedTouches[0].screenX - detailTouchStartX;
+            if (Math.abs(delta) < 40) return;
+            moveLightboxImage(event, delta < 0 ? 1 : -1);
         }
 
         function handleDetailTouchStart(event) {

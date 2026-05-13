@@ -537,7 +537,7 @@ def get_product_status_label(status):
         "active": "Aktif",
         "pending_seller_approval": "Satıcı Onayı",
         "pending_bidder_action": "Alıcı Onayı",
-        "seller_info_confirmation": "Bilgi Onayı",
+        "seller_info_confirmation": "Satıcı bilgi onayı",
         "completed": "Satıldı",
         "cancelled": "İptal"
     }
